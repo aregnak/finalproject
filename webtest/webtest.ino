@@ -104,7 +104,7 @@ void loop() {
         Serial.println("error in request");
     }
 
-   // delay(500);
+    delay(100);
   }
   
   else
