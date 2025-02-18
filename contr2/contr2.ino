@@ -9,7 +9,7 @@ const char* ssid = "mystery";
 const char* password = "electrotech";
 
 const char* serveraddr = "http://192.168.1.110:4444/control";
-
+const char* speedaddr = "http://192.168.1.110:4444/speed";
 
 // Motor 1
 int motor1Pin1 = 19; 
@@ -110,14 +110,6 @@ void processControl(String command)
   {
     handleRight();
   }
- // else if (command == "value")
- // {
- //   handleSpeed();
- // }
-  else
-  {
-    Serial.println("unknown command my guy");
-  }
 }
 
 void setup() {
@@ -173,24 +165,55 @@ void loop()
       StaticJsonDocument<200> doc;  // Adjust the size as needed
       DeserializationError error = deserializeJson(doc, payload);
 
-      if (error)
+      if (!error) 
       {
-        Serial.println("failed to parse JSON " + String(error.c_str()));
+        String command = doc["command"];
+        Serial.println("Extracted command: " + command);
       }
       else 
       {
-        String command = doc["command"].as<String>();
-        processControl(command);
+        Serial.println("error in request");
       }
     }
-    else 
-    {
-      Serial.println("error in request");
+
+    http.end();
+
+    // Fetch the current speed
+    http.begin(speedaddr);
+    httpCode = http.GET();
+
+    if (httpCode == HTTP_CODE_OK) {
+      String payload = http.getString();
+      Serial.println("Received speed payload: " + payload);
+
+      // Parse the JSON payload
+      StaticJsonDocument<200> doc;
+      DeserializationError error = deserializeJson(doc, payload);
+
+      if (!error) {
+        int speed = doc["speed"];
+        Serial.println("Extracted speed: " + String(speed));
+
+        // Map speed to PWM duty cycle (0-100% to 0-255)
+        dutyCycle = map(speed, 0, 100, 0, 255);
+        Serial.println("Calculated duty cycle: " + String(dutyCycle));
+
+        // Set motor speed using PWM
+        ledcWrite(0, dutyCycle);  // Update PWM for enable1Pin
+        ledcWrite(1, dutyCycle);  // Update PWM for enable2Pin
+        Serial.println("Motor speed set to " + String(speed) + "%");
+      }
     }
 
+    else 
+    {
+      Serial.println("Error in speed request. Code: " + String(httpCode));
+    }
+
+    http.end();
     delay(100);
   }
-  
+
   else
   {
     Serial.println("WiFi disconnected.");

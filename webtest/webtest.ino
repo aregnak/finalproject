@@ -2,10 +2,10 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 // Replace with your network credentials
-//const char* ssid = "NOKIA-4D01";
-//const char* password = "9LqFFSXEZb";
-const char* ssid = "mystery";
-const char* password = "electrotech";
+const char* ssid = "NOKIA-4D01";
+const char* password = "9LqFFSXEZb";
+//const char* ssid = "mystery";
+//const char* password = "electrotech";
 
 const char* serveraddr = "http://192.168.1.110:4444/control";
 
@@ -63,6 +63,7 @@ void setup() {
   Serial.println("");
   Serial.println("WiFi connected.");
   Serial.println("IP address: ");
+
   Serial.println(WiFi.localIP());
 }
 

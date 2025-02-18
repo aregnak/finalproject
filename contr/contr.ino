@@ -3,9 +3,7 @@
 
 // Replace with your network credentials
 const char* ssid     = "NOKIA-4D01";
-// const char* ssid = "Iphone 17 Pro Max Super XS Mini ";
 const char* password = "9LqFFSXEZb";
-// const char* password = "carissaispretty";
 
 // Create an instance of the WebServer on port 80
 WebServer server(80);
