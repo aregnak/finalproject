@@ -1,10 +1,171 @@
-void setup() {
-  // put your setup code here, to run once:
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
+#include "esp_camera.h"
 
+#define CAMERA_MODEL_ESP32S3_EYE // Has PSRAM
+
+#include "camera_pins.h"
+
+//const char* ssid     = "NOKIA-4D01";   //input your wifi name
+//const char* password = "9LqFFSXEZb";   //input your wifi passwords
+
+const char* ssid = "mystery";
+const char* password = "electrotech";
+
+
+String serveraddr = "http://192.168.1.110:4444";
+String upload_frame_url = "http://192.168.1.110:4444/upload_frame";
+
+// Motor 1
+int motor1Pin1 = 19; 
+int motor1Pin2 = 20; 
+int enable1Pin = 21;
+
+// Motor 2
+int motor2Pin1 = 47; 
+int motor2Pin2 = 48; 
+int enable2Pin = 45;
+
+const int freq = 30000;
+int dutyCycle = 0;  // PWM duty cycle for motor speed
+
+void setup() {
+  Serial.begin(115200);
+
+  // Set up motor control pins
+  pinMode(enable1Pin, OUTPUT);
+  pinMode(enable2Pin, OUTPUT);
+  pinMode(motor1Pin1, OUTPUT);
+  pinMode(motor1Pin2, OUTPUT);
+  pinMode(motor2Pin1, OUTPUT);
+  pinMode(motor2Pin2, OUTPUT);
+
+  // Initialize PWM for motor speed control
+  ledcAttach(enable1Pin, freq, 8);
+  ledcAttach(enable2Pin, freq, 8);
+    
+  // Initialize PWM with 0 duty cycle
+  ledcWrite(enable1Pin, 0);
+  ledcWrite(enable2Pin, 0);
+
+  // Initialize the camera
+    camera_config_t config;
+  config.ledc_channel = LEDC_CHANNEL_0;
+  config.ledc_timer = LEDC_TIMER_0;
+  config.pin_d0 = Y2_GPIO_NUM;
+  config.pin_d1 = Y3_GPIO_NUM;
+  config.pin_d2 = Y4_GPIO_NUM;
+  config.pin_d3 = Y5_GPIO_NUM;
+  config.pin_d4 = Y6_GPIO_NUM;
+  config.pin_d5 = Y7_GPIO_NUM;
+  config.pin_d6 = Y8_GPIO_NUM;
+  config.pin_d7 = Y9_GPIO_NUM;
+  config.pin_xclk = XCLK_GPIO_NUM;
+  config.pin_pclk = PCLK_GPIO_NUM;
+  config.pin_vsync = VSYNC_GPIO_NUM;
+  config.pin_href = HREF_GPIO_NUM;
+  config.pin_sccb_sda = SIOD_GPIO_NUM;
+  config.pin_sccb_scl = SIOC_GPIO_NUM;
+  config.pin_pwdn = PWDN_GPIO_NUM;
+  config.pin_reset = RESET_GPIO_NUM;
+  config.xclk_freq_hz = 20000000;
+  config.frame_size = FRAMESIZE_QVGA;
+  config.pixel_format = PIXFORMAT_JPEG; // for streaming
+  config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
+  config.fb_location = CAMERA_FB_IN_PSRAM;
+  config.jpeg_quality = 12;
+  config.fb_count = 1;
+  
+  // for larger pre-allocated frame buffer.
+  if(psramFound()){
+    config.jpeg_quality = 30;
+    config.fb_count = 2;
+    config.grab_mode = CAMERA_GRAB_LATEST;
+  } else {
+    // Limit the frame size when PSRAM is not available
+    config.frame_size = FRAMESIZE_SVGA;
+    config.fb_location = CAMERA_FB_IN_DRAM;
+  }
+
+  // Initialize the camera
+  esp_err_t err = esp_camera_init(&config);
+  if (err != ESP_OK) {
+    Serial.printf("Camera init failed with error 0x%x", err);
+    return;
+  }
+
+  // Connect to Wi-Fi
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected.");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  if (WiFi.status() == WL_CONNECTED) {
+    // Capture a frame from the camera
+    camera_fb_t *fb = esp_camera_fb_get();
+    if (!fb) {
+      Serial.println("Camera capture failed");
+      return;
+    }
 
+    // Send the frame to the Flask server
+    HTTPClient http;
+    http.begin(upload_frame_url);
+    http.addHeader("Content-Type", "image/jpeg");
+    int httpCode = http.POST(fb->buf, fb->len);
+    if (httpCode == HTTP_CODE_OK) {
+      Serial.println("Frame uploaded successfully");
+    } else {
+      Serial.printf("Error uploading frame. HTTP code: %d\n", httpCode);
+    }
+    http.end();
+
+    // Return the frame buffer to the camera
+    esp_camera_fb_return(fb);
+
+    // Fetch the current command and speed
+    String fulladdr = serveraddr + "/control";
+    http.begin(fulladdr);
+    httpCode = http.GET();
+    if (httpCode == HTTP_CODE_OK) {
+      String payload = http.getString();
+      StaticJsonDocument<200> doc;
+      DeserializationError error = deserializeJson(doc, payload);
+      if (!error) {
+        String command = doc["command"];
+        Serial.println("Extracted command: " + command);
+        // Process the command (e.g., control motors)
+      }
+    }
+    http.end();
+
+    http.begin(serveraddr + "/speed");
+    httpCode = http.GET();
+    if (httpCode == HTTP_CODE_OK) {
+      String payload = http.getString();
+      StaticJsonDocument<200> doc;
+      DeserializationError error = deserializeJson(doc, payload);
+      if (!error) {
+        int speed = doc["speed"];
+        Serial.println("Extracted speed: " + String(speed));
+        dutyCycle = map(speed, 0, 100, 0, 255);
+        ledcWrite(0, dutyCycle);
+        ledcWrite(1, dutyCycle);
+        Serial.println("Motor speed set to " + String(speed) + "%");
+      }
+    }
+    http.end();
+  }
+
+  delay(100);  // Adjust the delay as needed
 }
- 

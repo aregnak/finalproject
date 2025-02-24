@@ -255,29 +255,6 @@ static esp_err_t index_handler(httpd_req_t *req)
   return err;
 }
 
-//static esp_err_t button_handler(httpd_req_t *req)
-//{
-//  esp_err_t err;
-//  camera_fb_t * fb = NULL;
-//  fb = esp_camera_fb_get();
-//  if (!fb)
-//  {
-//      ESP_LOGE(TAG, "Camera capture failed");
-//      err = ESP_FAIL;
-//  }
-//  else
-//  {
-//    String video = "/video";
-//    int jpgCount=readFileNum(SD_MMC, video.c_str());
-//    String path = video + "/" + String(jpgCount) +".jpg";
-//    writejpg(SD_MMC, path.c_str(), fb->buf, fb->len);
-//    esp_camera_fb_return(fb);
-//    fb = NULL;
-//    err=ESP_OK;
-//  }
-//  return err;
-//}
-
 void startCameraServer()
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
@@ -295,12 +272,6 @@ void startCameraServer()
         .handler = stream_handler,
         .user_ctx = NULL}; 
     
-    //httpd_uri_t button_uri = {
-    //    .uri = "/button",
-    //    .method = HTTP_POST,
-    //    .handler = button_handler,
-    //    .user_ctx = NULL}; 
-
     ra_filter_init(&ra_filter, 20);
 
     ESP_LOGI(TAG, "Starting web server on port: '%d'", config.server_port);

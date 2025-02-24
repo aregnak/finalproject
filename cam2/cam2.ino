@@ -12,8 +12,11 @@
 
 #include "camera_pins.h"
 
-const char* ssid     = "NOKIA-4D01";   //input your wifi name
-const char* password = "9LqFFSXEZb";   //input your wifi passwords
+//const char* ssid     = "NOKIA-4D01";   //input your wifi name
+//const char* password = "9LqFFSXEZb";   //input your wifi passwords
+
+const char* ssid = "mystery";
+const char* password = "electrotech";
 
 void cameraInit(void);
 void startCameraServer();
