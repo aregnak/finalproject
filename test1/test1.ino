@@ -95,6 +95,14 @@ void setup() {
     return;
   }
 
+  sensor_t * s = esp_camera_sensor_get();
+  // initial sensors are flipped vertically and colors are a bit saturated
+  s->set_vflip(s, 1); // flip it back
+  s->set_brightness(s, 1); // up the brightness just a bit
+  s->set_saturation(s, 0); // lower the saturation
+  s->set_hmirror(s, 1);
+  s->set_dcw(s, 1);
+
   // Connect to Wi-Fi
   Serial.print("Connecting to ");
   Serial.println(ssid);
@@ -134,8 +142,7 @@ void loop() {
     esp_camera_fb_return(fb);
 
     // Fetch the current command and speed
-    String fulladdr = serveraddr + "/control";
-    http.begin(fulladdr);
+    http.begin(serveraddr + "/control");
     httpCode = http.GET();
     if (httpCode == HTTP_CODE_OK) {
       String payload = http.getString();
@@ -167,5 +174,5 @@ void loop() {
     http.end();
   }
 
-  delay(100);  // Adjust the delay as needed
+  //delay(100);  // Adjust the delay as needed
 }

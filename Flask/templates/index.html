@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionVroom</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        .control-button {
+            padding: 15px 25px;
+            font-size: 18px;
+            margin: 10px;
+            cursor: pointer;
+        }
+        #status-message {
+            margin-top: 20px;
+            font-size: 16px;
+        }
+        #motorSlider {
+            width: 80%;
+            margin-top: 20px;
+        }
+        #video-stream {
+            transform: rotate(180deg);
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>ESP32 Control</h1>
+    <p>Use the buttons below or the arrow keys and spacebar to control the car.</p>
+    <button class="control-button" onclick="sendCommand('FORWARD')">Forward</button>
+    <button class="control-button" onclick="sendCommand('REVERSE')">Reverse</button>
+    <button class="control-button" onclick="sendCommand('LEFT')">Left</button>
+    <button class="control-button" onclick="sendCommand('RIGHT')">Right</button>
+    <button class="control-button" onclick="sendCommand('STOP')">Stop</button>
+
+    <p>Motor Speed: <span id="motorSpeed">0</span>%</p>
+    <input type="range" min="0" max="100" step="5" id="motorSlider" oninput="updateMotorSpeed(this.value)" value="0"/>
+
+    <p id="status-message"></p>
+
+    <img id="video-stream" src="/video_feed" alt="Video Stream">
+
+    <script>
+        // Function to send commands to the server
+        async function sendCommand(command) {
+            const response = await fetch('/set_command', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ command: command }),
+            });
+
+            const data = await response.json();
+            const statusMessage = document.getElementById('status-message');
+
+            if (data.status === "success") {
+                statusMessage.textContent = `Command sent: ${data.command}`;
+                statusMessage.style.color = "green";
+            } else {
+                statusMessage.textContent = `Error: ${data.message}`;
+                statusMessage.style.color = "red";
+            }
+        }
+
+        // Function to update motor speed
+        async function updateMotorSpeed(value) {
+            document.getElementById('motorSpeed').textContent = value; // Update displayed speed
+            const response = await fetch('/set_speed', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ speed: value }),
+            });
+
+            const data = await response.json();
+            const statusMessage = document.getElementById('status-message');
+
+            if (data.status === "success") {
+                statusMessage.textContent = `Speed set to: ${value}%`;
+                statusMessage.style.color = "green";
+            } else {
+                statusMessage.textContent = `Error: ${data.message}`;
+                statusMessage.style.color = "red";
+            }
+        }
+
+        // Function to handle keyboard input
+        function handleKeyDown(event) {
+            switch (event.key) {
+                case "ArrowUp":
+                    sendCommand('FORWARD');
+                    break;
+                case "ArrowDown":
+                    sendCommand('REVERSE');
+                    break;
+                case "ArrowLeft":
+                    sendCommand('LEFT');
+                    break;
+                case "ArrowRight":
+                    sendCommand('RIGHT');
+                    break;
+                case " ":
+                    sendCommand('STOP');
+                    break;
+                default:
+                    // Ignore other keys
+                    break;
+            }
+        }
+
+        // Add event listener for keydown events
+        document.addEventListener('keydown', handleKeyDown);
+    </script>
+</body>
+</html>
