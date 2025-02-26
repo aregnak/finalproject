@@ -7,15 +7,15 @@
 
 #include "camera_pins.h"
 
-//const char* ssid     = "NOKIA-4D01";   //input your wifi name
-//const char* password = "9LqFFSXEZb";   //input your wifi passwords
+const char* ssid     = "NOKIA-4D01";   //input your wifi name
+const char* password = "9LqFFSXEZb";   //input your wifi passwords
 
-const char* ssid = "mystery";
-const char* password = "electrotech";
+// const char* ssid = "mystery";
+// const char* password = "electrotech";
 
 
-String serveraddr = "http://192.168.1.110:4444";
-String upload_frame_url = "http://192.168.1.110:4444/upload_frame";
+String serveraddr = "http://192.168.18.14:4440";
+String upload_frame_url = "http://192.168.18.14:4440/upload_frame";
 
 // Motor 1
 int motor1Pin1 = 19; 
@@ -30,12 +30,82 @@ int enable2Pin = 45;
 const int freq = 30000;
 int dutyCycle = 0;  // PWM duty cycle for motor speed
 
-void setup() {
+void handleForward() 
+{
+  Serial.println("Forward");
+  digitalWrite(motor1Pin1, LOW);
+  digitalWrite(motor1Pin2, HIGH); 
+  digitalWrite(motor2Pin1, LOW);
+  digitalWrite(motor2Pin2, HIGH);
+}
+
+void handleLeft() 
+{
+  Serial.println("Left");
+  digitalWrite(motor1Pin1, LOW); 
+  digitalWrite(motor1Pin2, LOW); 
+  digitalWrite(motor2Pin1, LOW);
+  digitalWrite(motor2Pin2, HIGH);
+}
+
+void handleStop() 
+{
+  Serial.println("Stop");
+  digitalWrite(motor1Pin1, LOW); 
+  digitalWrite(motor1Pin2, LOW); 
+  digitalWrite(motor2Pin1, LOW);
+  digitalWrite(motor2Pin2, LOW);   
+}
+
+void handleRight() 
+{
+  Serial.println("Right");
+  digitalWrite(motor1Pin1, LOW); 
+  digitalWrite(motor1Pin2, HIGH); 
+  digitalWrite(motor2Pin1, LOW);
+  digitalWrite(motor2Pin2, LOW);    
+}
+
+void handleReverse() 
+{
+  Serial.println("Reverse");
+  digitalWrite(motor1Pin1, HIGH);
+  digitalWrite(motor1Pin2, LOW); 
+  digitalWrite(motor2Pin1, HIGH);
+  digitalWrite(motor2Pin2, LOW);          
+}
+
+void processControl(String command)
+{
+  command.trim();
+
+  if (command == "FORWARD")
+  {
+    handleForward();
+  }
+  else if (command == "STOP")
+  {
+    handleStop();
+  }
+  else if (command == "REVERSE")
+  {
+    handleReverse();
+  }
+  else if (command == "LEFT")
+  {
+    handleLeft();
+  }
+  else if (command == "RIGHT")
+  {
+    handleRight();
+  }
+}
+
+void setup() 
+{
   Serial.begin(115200);
 
   // Set up motor control pins
-  pinMode(enable1Pin, OUTPUT);
-  pinMode(enable2Pin, OUTPUT);
   pinMode(motor1Pin1, OUTPUT);
   pinMode(motor1Pin2, OUTPUT);
   pinMode(motor2Pin1, OUTPUT);
@@ -50,7 +120,7 @@ void setup() {
   ledcWrite(enable2Pin, 0);
 
   // Initialize the camera
-    camera_config_t config;
+  camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer = LEDC_TIMER_0;
   config.pin_d0 = Y2_GPIO_NUM;
@@ -78,11 +148,14 @@ void setup() {
   config.fb_count = 1;
   
   // for larger pre-allocated frame buffer.
-  if(psramFound()){
+  if(psramFound())
+  {
     config.jpeg_quality = 30;
     config.fb_count = 2;
     config.grab_mode = CAMERA_GRAB_LATEST;
-  } else {
+  } 
+  else 
+  {
     // Limit the frame size when PSRAM is not available
     config.frame_size = FRAMESIZE_SVGA;
     config.fb_location = CAMERA_FB_IN_DRAM;
@@ -90,7 +163,8 @@ void setup() {
 
   // Initialize the camera
   esp_err_t err = esp_camera_init(&config);
-  if (err != ESP_OK) {
+  if (err != ESP_OK) 
+  {
     Serial.printf("Camera init failed with error 0x%x", err);
     return;
   }
@@ -107,7 +181,8 @@ void setup() {
   Serial.print("Connecting to ");
   Serial.println(ssid);
   WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED) 
+  {
     delay(500);
     Serial.print(".");
   }
@@ -117,11 +192,14 @@ void setup() {
   Serial.println(WiFi.localIP());
 }
 
-void loop() {
-  if (WiFi.status() == WL_CONNECTED) {
+void loop() 
+{
+  if (WiFi.status() == WL_CONNECTED) 
+  {
     // Capture a frame from the camera
     camera_fb_t *fb = esp_camera_fb_get();
-    if (!fb) {
+    if (!fb) 
+    {
       Serial.println("Camera capture failed");
       return;
     }
@@ -131,9 +209,13 @@ void loop() {
     http.begin(upload_frame_url);
     http.addHeader("Content-Type", "image/jpeg");
     int httpCode = http.POST(fb->buf, fb->len);
-    if (httpCode == HTTP_CODE_OK) {
+    if (httpCode == HTTP_CODE_OK) 
+    {
       Serial.println("Frame uploaded successfully");
-    } else {
+    } 
+
+    else 
+    {
       Serial.printf("Error uploading frame. HTTP code: %d\n", httpCode);
     }
     http.end();
@@ -144,32 +226,65 @@ void loop() {
     // Fetch the current command and speed
     http.begin(serveraddr + "/control");
     httpCode = http.GET();
-    if (httpCode == HTTP_CODE_OK) {
+
+    if (httpCode == HTTP_CODE_OK)
+    {
       String payload = http.getString();
-      StaticJsonDocument<200> doc;
+      Serial.println("received control: " + payload);
+
+      StaticJsonDocument<200> doc;  // Adjust the size as needed
       DeserializationError error = deserializeJson(doc, payload);
-      if (!error) {
+
+      if (!error) 
+      {
         String command = doc["command"];
         Serial.println("Extracted command: " + command);
-        // Process the command (e.g., control motors)
+        processControl(command);
+      }
+      else 
+      {
+        Serial.println("error in request");
       }
     }
+
+    else 
+    {
+      Serial.println("Error in speed request. Code: " + String(httpCode));
+    }
+
     http.end();
 
     http.begin(serveraddr + "/speed");
     httpCode = http.GET();
-    if (httpCode == HTTP_CODE_OK) {
+
+    if (httpCode == HTTP_CODE_OK) 
+    {
       String payload = http.getString();
+      Serial.println("Received speed payload: " + payload);
+
+      // Parse the JSON payload
       StaticJsonDocument<200> doc;
       DeserializationError error = deserializeJson(doc, payload);
-      if (!error) {
+
+      if (!error) 
+      {
         int speed = doc["speed"];
         Serial.println("Extracted speed: " + String(speed));
-        dutyCycle = map(speed, 0, 100, 0, 255);
-        ledcWrite(0, dutyCycle);
-        ledcWrite(1, dutyCycle);
+
+        // Map speed to PWM duty cycle (0-100% to 0-255)
+        dutyCycle = map(speed, 0, 100, 155, 255);
+        Serial.println("Calculated duty cycle: " + String(dutyCycle));
+
+        // Set motor speed using PWM
+        ledcWrite(enable1Pin, dutyCycle);  // Update PWM for enable1Pin
+        ledcWrite(enable2Pin, dutyCycle);  // Update PWM for enable2Pin
         Serial.println("Motor speed set to " + String(speed) + "%");
       }
+    }
+
+    else 
+    {
+      Serial.println("Error in speed request. Code: " + String(httpCode));
     }
     http.end();
   }
