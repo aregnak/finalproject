@@ -7,15 +7,18 @@
 
 #include "camera_pins.h"
 
-const char* ssid     = "NOKIA-4D01";   //input your wifi name
-const char* password = "9LqFFSXEZb";   //input your wifi passwords
+// const char* ssid     = "NOKIA-4D01";   //input your wifi name
+// const char* password = "9LqFFSXEZb";   //input your wifi passwords
 
-// const char* ssid = "mystery";
-// const char* password = "electrotech";
+const char* ssid = "mystery";
+const char* password = "electrotech";
 
 
-String serveraddr = "http://192.168.18.14:4440";
-String upload_frame_url = "http://192.168.18.14:4440/upload_frame";
+// String serveraddr = "http://192.168.18.14:4440";
+// String upload_frame_url = "http://192.168.18.14:4440/upload_frame";
+
+String serveraddr = "http://192.168.1.110:4440";
+String upload_frame_url = "http://192.168.1.110:4440/upload_frame";
 
 // Motor 1
 int motor1Pin1 = 19; 
@@ -174,7 +177,7 @@ void setup()
   s->set_vflip(s, 1); // flip it back
   s->set_brightness(s, 1); // up the brightness just a bit
   s->set_saturation(s, 0); // lower the saturation
-  s->set_hmirror(s, 1);
+  // s->set_hmirror(s, 1);
   s->set_dcw(s, 1);
 
   // Connect to Wi-Fi
@@ -211,7 +214,7 @@ void loop()
     int httpCode = http.POST(fb->buf, fb->len);
     if (httpCode == HTTP_CODE_OK) 
     {
-      Serial.println("Frame uploaded successfully");
+      //Serial.println("Frame uploaded successfully");
     } 
 
     else 
@@ -230,7 +233,7 @@ void loop()
     if (httpCode == HTTP_CODE_OK)
     {
       String payload = http.getString();
-      Serial.println("received control: " + payload);
+      //Serial.println("received control: " + payload);
 
       StaticJsonDocument<200> doc;  // Adjust the size as needed
       DeserializationError error = deserializeJson(doc, payload);
@@ -238,7 +241,7 @@ void loop()
       if (!error) 
       {
         String command = doc["command"];
-        Serial.println("Extracted command: " + command);
+        //Serial.println("Extracted command: " + command);
         processControl(command);
       }
       else 
@@ -260,7 +263,7 @@ void loop()
     if (httpCode == HTTP_CODE_OK) 
     {
       String payload = http.getString();
-      Serial.println("Received speed payload: " + payload);
+      //Serial.println("Received speed payload: " + payload);
 
       // Parse the JSON payload
       StaticJsonDocument<200> doc;
@@ -273,12 +276,12 @@ void loop()
 
         // Map speed to PWM duty cycle (0-100% to 0-255)
         dutyCycle = map(speed, 0, 100, 155, 255);
-        Serial.println("Calculated duty cycle: " + String(dutyCycle));
+        //Serial.println("Calculated duty cycle: " + String(dutyCycle));
 
         // Set motor speed using PWM
         ledcWrite(enable1Pin, dutyCycle);  // Update PWM for enable1Pin
         ledcWrite(enable2Pin, dutyCycle);  // Update PWM for enable2Pin
-        Serial.println("Motor speed set to " + String(speed) + "%");
+        //Serial.println("Motor speed set to " + String(speed) + "%");
       }
     }
 
