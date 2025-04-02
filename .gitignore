@@ -1,0 +1,7 @@
+# build files
+*.obj
+*.o
+*.hex
+*.elf
+
+config.h
