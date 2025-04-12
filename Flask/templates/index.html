@@ -6,45 +6,163 @@
     <title>VisionVroom</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+	    font-family: "JetBrains Mono",monospace;
             text-align: center;
             margin-top: 50px;
         }
         .control-button {
-            padding: 15px 25px;
+            padding: 12px 28px;
             font-size: 18px;
             margin: 10px;
             cursor: pointer;
+	    background-color: #2196F3;
         }
+	/* CSS */
+	.button-30 {
+	  align-items: center;
+	  appearance: none;
+	  background-color: #FCFCFD;
+	  border-radius: 4px;
+	  border-width: 0;
+	  box-shadow: rgba(45, 35, 66, 0.4) 0 2px 4px,rgba(45, 35, 66, 0.3) 0 7px 13px -3px,#D6D6E7 0 -3px 0 inset;
+	  box-sizing: border-box;
+	  color: #36395A;
+	  cursor: pointer;
+	  display: inline-flex;
+	  font-family: "JetBrains Mono",monospace;
+	  height: 48px;
+	  justify-content: center;
+	  line-height: 1;
+	  list-style: none;
+	  overflow: hidden;
+	  padding-left: 16px;
+	  padding-right: 16px;
+	  position: relative;
+	  text-align: left;
+	  text-decoration: none;
+	  transition: box-shadow .15s,transform .15s;
+	  user-select: none;
+	  -webkit-user-select: none;
+	  touch-action: manipulation;
+	  white-space: nowrap;
+	  will-change: box-shadow,transform;
+	  font-size: 18px;
+	}
+
+	.button-30:focus {
+	  box-shadow: #D6D6E7 0 0 0 1.5px inset, rgba(45, 35, 66, 0.4) 0 2px 4px, rgba(45, 35, 66, 0.3) 0 7px 13px -3px, #D6D6E7 0 -3px 0 inset;
+	}
+
+	.button-30:hover {
+	  box-shadow: rgba(45, 35, 66, 0.4) 0 4px 8px, rgba(45, 35, 66, 0.3) 0 7px 13px -3px, #D6D6E7 0 -3px 0 inset;
+	  transform: translateY(-2px);
+	}
+
+	.button-30:active {
+	  box-shadow: #D6D6E7 0 3px 7px inset;
+	  transform: translateY(2px);
+	}
+
+
         #status-message {
             margin-top: 20px;
             font-size: 16px;
         }
         #motorSlider {
-            width: 80%;
+            width: 40%;
+            margin-top: 20px;
+	    background-color: #2196F3;
+        }
+        .video-container {
+            display: flex;
+            justify-content: center;
             margin-top: 20px;
         }
-        #video-stream {
+        .video-stream {
             transform: rotate(180deg);
+            margin: 10px;
+        }
+        .auto-direction {
             margin-top: 20px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+	.debuginfo {
+	    margin-top: 20px;
+	    font-size: 16px;
+	}
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+	.slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }	
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
         }
     </style>
 </head>
 <body>
     <h1>ESP32 Control</h1>
     <p>Use the buttons below or the arrow keys and spacebar to control the car.</p>
-    <button class="control-button" onclick="sendCommand('FORWARD')">Forward</button>
-    <button class="control-button" onclick="sendCommand('REVERSE')">Reverse</button>
-    <button class="control-button" onclick="sendCommand('LEFT')">Left</button>
-    <button class="control-button" onclick="sendCommand('RIGHT')">Right</button>
-    <button class="control-button" onclick="sendCommand('STOP')">Stop</button>
+    <button class="button-30" onclick="sendCommand('FORWARD')">Forward</button>
+    <button class="button-30" onclick="sendCommand('REVERSE')">Reverse</button>
+    <button class="button-30" onclick="sendCommand('LEFT')">Left</button>
+    <button class="button-30" onclick="sendCommand('RIGHT')">Right</button>
+    <button class="button-30" onclick="sendCommand('STOP')">Stop</button>
 
     <p>Motor Speed: <span id="motorSpeed">0</span>%</p>
     <input type="range" min="0" max="100" step="5" id="motorSlider" oninput="updateMotorSpeed(this.value)" value="0"/>
 
+    <div class="auto-direction">
+        <p><strong>Auto Mode:</strong></p>
+        <label class="switch">
+            <input type="checkbox" id="autoModeToggle" onchange="toggleAutoMode()">
+            <span class="slider"></span>
+        </label>
+    </div>
+
     <p id="status-message"></p>
 
-    <img id="video-stream" src="/video_feed" alt="Video Stream">
+    <div class="video-container">
+	    <!-- <img class="video-stream" src="/raw_video_feed" alt="Raw Video Stream"> -->
+        <img class="video-stream" src="/processed_video_feed" alt="Processed Video Stream">
+    </div>
+
+    <div class="debuginfo">
+	<p>Auto Direction: <span id="autoDirection">###</span></p>
+    </div>
+	
 
     <script>
         // Function to send commands to the server
@@ -92,6 +210,31 @@
             }
         }
 
+        // Function to toggle auto mode
+        async function toggleAutoMode() {
+            const autoModeToggle = document.getElementById('autoModeToggle');
+            const autoMode = autoModeToggle.checked;
+
+            const response = await fetch('/toggle_auto_mode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ auto_mode: autoMode }),
+            });
+
+            const data = await response.json();
+            const statusMessage = document.getElementById('status-message');
+
+            if (data.status === "success") {
+                statusMessage.textContent = `Auto mode ${autoMode ? "enabled" : "disabled"}`;
+                statusMessage.style.color = "green";
+            } else {
+                statusMessage.textContent = `Error: ${data.message}`;
+                statusMessage.style.color = "red";
+            }
+        }
+
         // Function to handle keyboard input
         function handleKeyDown(event) {
             switch (event.key) {
@@ -115,6 +258,15 @@
                     break;
             }
         }
+
+        // Function to fetch and update the auto-detected direction
+        async function updateAutoDirection() {
+            const response = await fetch('/control');
+            const data = await response.json();
+            document.getElementById('autoDirection').textContent = data.command;
+        }
+
+        setInterval(updateAutoDirection, 100);
 
         // Add event listener for keydown events
         document.addEventListener('keydown', handleKeyDown);
