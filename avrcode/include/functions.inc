@@ -244,3 +244,4 @@ asc2bin:
  
   invalid:
     ret
+

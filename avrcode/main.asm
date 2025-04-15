@@ -4,6 +4,7 @@
 .org $60
 adclsb: .byte 1 ; at $60
 adcmsb: .byte 1 ; at $61
+adchex: .byte 1 ; at $62
 
 .cseg
 reset: rjmp init     ;used as an entry point for the reset
@@ -71,19 +72,34 @@ l1:
   breq l1 ; loop while nothing received
 
   lds r20, $6000 ; store adc value into r20
+  ;sts adchex, r20 ; store hex value to memory
 
   ; convert hex adc value to dec
-  mov r16, r20
-  rcall hex2asc
+  ;mov r16, r20
+  ;rcall hex2asc
 
+  ;sts adclsb, r16
+  ;mov r16, r17
+  ;sts adcmsb, r16
+
+  mov r16, r20
+
+  ldi r17, $64
+  mul r16, r17 ; multiply with 100(dec)
+
+  ldi r16, $01
+  mov r3, r16 ; set divisor (r3:r2)
+  ldi r16, $bf
+  mov r2, r16
+
+  rcall div16
+
+  mov r16, r0
+  rcall hex2asc
   sts adclsb, r16
   mov r16, r17
   sts adcmsb, r16
- 
-  ;rcall lcd_clear
-;  rcall ln2
-;  rjmp movementcmp
-
+  
   ; get input and print correct message
   rcall getb
   cpi r16, $02
@@ -142,6 +158,7 @@ getb:
   andi r16, $07 ; mask the first 3 bits of r16
   ret
 
+; small delay sbr ~300ms
 wait:
   ldi XH, $ff
   ldi XL, $ff
@@ -160,6 +177,40 @@ print:
 
   rcall wait
   ret
+
+percent:
+
+
+; my division subroutine
+div16:
+  clr r4
+  clr r5
+  ldi r16, 17
+
+divloop:
+  rol r0
+  rol r1
+  dec r16
+  brne divcont
+
+  ret
+
+divcont:
+  rol r4
+  rol r5
+  sub r4, r2
+  sbc r5, r3
+
+  brcc divskip
+  add r4, r2
+  adc r5, r3
+  clc
+  rjmp divloop
+
+divskip:
+  sec
+  rjmp divloop
+
 
 ; -------
 ; data bytes
