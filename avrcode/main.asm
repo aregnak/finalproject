@@ -1,10 +1,13 @@
 .include "m8515def.inc"
 
-.dseg 
+.dseg
 .org $60
 adclsb: .byte 1 ; at $60
 adcmsb: .byte 1 ; at $61
 adchex: .byte 1 ; at $62
+
+test: .byte 1 ; at $60
+test2: .byte 1 ; at $61
 
 .cseg
 reset: rjmp init     ;used as an entry point for the reset
@@ -22,7 +25,7 @@ init:
 
   ; initialize portb as input
   ldi r16, $00
-  out DDRB, r16 
+  out DDRB, r16
 
 bootmessage:
   ldi ZH, HIGH(bootmsg<<1)
@@ -44,7 +47,7 @@ wificmp:
   rcall lcd_puts
   rcall wait
   rcall lcd_clear
-  rjmp wificmp  ; loop connecting message until connected
+  ;rjmp wificmp  ; loop connecting message until connected
 
 wifigood:
   rcall ln1
@@ -63,7 +66,7 @@ movementcmp:
 loop:
   ; start adc
   sts $6000, r1
-  
+
 l1:
   ; check for adc input
   in r20, PINB
@@ -72,34 +75,24 @@ l1:
   breq l1 ; loop while nothing received
 
   lds r20, $6000 ; store adc value into r20
-  ;sts adchex, r20 ; store hex value to memory
+  sts adchex, r20 ; store hex value to memory
 
   ; convert hex adc value to dec
-  ;mov r16, r20
-  ;rcall hex2asc
-
-  ;sts adclsb, r16
-  ;mov r16, r17
-  ;sts adcmsb, r16
-
   mov r16, r20
+  rcall hex2asc
 
-  ldi r17, $64
-  mul r16, r17 ; multiply with 100(dec)
+  sts test, r16
+  mov r16, r17
+  sts test2, r16
 
-  ldi r16, $01
-  mov r3, r16 ; set divisor (r3:r2)
-  ldi r16, $bf
-  mov r2, r16
 
-  rcall div16
 
-  mov r16, r0
+  mov r16, r4
   rcall hex2asc
   sts adclsb, r16
   mov r16, r17
   sts adcmsb, r16
-  
+
   ; get input and print correct message
   rcall getb
   cpi r16, $02
@@ -119,7 +112,7 @@ msgnull:
   ldi ZL, LOW(nullmsg<<1)
   rcall print
   rjmp movementcmp
- 
+
 msgfore:
   ldi ZH, HIGH(foremsg<<1)
   ldi ZL, LOW(foremsg<<1)
@@ -175,13 +168,43 @@ print:
   lds r16, adcmsb
   rcall lcd_putch
 
+  ldi r16, ' '
+  rcall lcd_putch
+
+  lds r16, test
+  rcall lcd_putch
+  lds r16, test2
+  rcall lcd_putch
+
+
   rcall wait
   ret
 
+
+; calculate battery percentage of a 9v batter in the range of 9.7v-7.2v (0xff-0xc0)
+; input: r16 should have adc level in hex
+; output: r16 with the percentage in hex
 percent:
+  subi r16, 192 ; read level - 192
+  ldi r17, 63   ; 255 - 192
+
+  rcall div8
+
+  ldi r17, 100 ; multiply by 100 for percentage
+  mul r16, r17
+  mov r16, r0  ; save percentage into r16
+
+  ret
 
 
-; my division subroutine
+; input:
+; R1:R0 (dividend)
+; R3:R2 (divisor)
+; output:
+; R1:R0 (Quotient)
+; R5:R4 (remainder)
+;
+; (R1:R0 / R3:R2) = (R1:R0), (R5:R4)
 div16:
   clr r4
   clr r5
@@ -212,10 +235,34 @@ divskip:
   rjmp divloop
 
 
+; R16 / R17 = R16, Remainder R18
+div8:
+    clr     R18         ; Clear remainder
+    ldi     R19, 9      ; Loop counter (8 bits + 1 initial shift)
+
+div8loop:
+    rol     R16         ; Shift dividend
+    dec     R19         ; Decrement counter
+    breq    div8end     ; Exit if done
+    rol     R18         ; Shift remainder
+    sub     R18, R17    ; Subtract divisor from remainder
+    brcc    div_skip    ; Skip if remainder >= 0
+    add     R18, R17    ; Restore remainder if negative
+    clc                 ; Clear Carry (quotient bit = 0)
+    rjmp    div8loop
+
+div8skip:
+    sec                 ; Set Carry (quotient bit = 1)
+    rjmp    div8loop
+
+div8end:
+    rol     R16         ; Final shift to set quotient
+    ret
+
 ; -------
 ; data bytes
 ; the extra 0s at the end are for padding
-bootmsg:     .db "VisionVroom", 1, "Areg Nakashian", 0, 0 
+bootmsg:     .db "VisionVroom", 1, "Areg Nakashian", 0, 0
 wifimsg:     .db "Connecting to", 1, "WiFi", 0, 0
 wifigoodmsg: .db "WiFi Connected ", 1, "Successfully!", 0
 foremsg:     .db "ESP32: Foreward", 0, 0
