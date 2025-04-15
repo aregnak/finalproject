@@ -1,8 +1,12 @@
 .include "m8515def.inc"
 
+.dseg 
+.org $60
+adclsb: .byte 1 ; at $60
+adcmsb: .byte 1 ; at $61
+
 .cseg
 reset: rjmp init     ;used as an entry point for the reset
-isr0:  rjmp isr_int0 ; int0 entry
 
 .org $16
 
@@ -19,7 +23,7 @@ init:
   ldi r16, $00
   out DDRB, r16 
 
-firstmessage:
+bootmessage:
   ldi ZH, HIGH(bootmsg<<1)
 	ldi ZL, LOW(bootmsg<<1)
   rcall lcd_puts
@@ -51,44 +55,34 @@ wifigood:
 
 movementcmp:
   rcall lcd_clear
-  rcall ln1
-  ldi ZH, HIGH(movemsg<<1)
-  ldi ZL, LOW(movemsg<<1)
-  rcall lcd_puts
-  rcall ln2
+  rcall ln2 ; for battery percentage
 
-  clr r23
+  ; clear input register
   clr r20
 loop:
+  ; start adc
   sts $6000, r1
   
 l1:
+  ; check for adc input
   in r20, PINB
   andi r20, $8
   cpi r20, $1
-  breq l1 
+  breq l1 ; loop while nothing received
 
-  lds r20, $6000 
+  lds r20, $6000 ; store adc value into r20
 
-  mov r16, r23
-  rcall hex2asc
-  mov r16, r17
-  rcall lcd_putch
-  inc r23
-
-  mov r16, r20 
-
+  ; convert hex adc value to dec
+  mov r16, r20
   rcall hex2asc
 
-print:
-  rcall lcd_putch
+  sts adclsb, r16
   mov r16, r17
-  rcall lcd_putch
-
-  rcall wait
-  rcall lcd_clear
-  rcall ln2
-  rjmp loop
+  sts adcmsb, r16
+ 
+  ;rcall lcd_clear
+;  rcall ln2
+;  rjmp movementcmp
 
   ; get input and print correct message
   rcall getb
@@ -107,66 +101,38 @@ print:
 msgnull:
   ldi ZH, HIGH(nullmsg<<1)
   ldi ZL, LOW(nullmsg<<1)
-  rcall lcd_puts
-  rcall wait
-  rcall lcd_clear
+  rcall print
   rjmp movementcmp
  
 msgfore:
   ldi ZH, HIGH(foremsg<<1)
   ldi ZL, LOW(foremsg<<1)
-  rcall lcd_puts
-  rcall wait
-  rcall lcd_clear
+  rcall print
   rjmp movementcmp
 
 msgback:
   ldi ZH, HIGH(backmsg<<1)
   ldi ZL, LOW(backmsg<<1)
-  rcall lcd_puts
-  rcall wait
-  rcall lcd_clear
+  rcall print
   rjmp movementcmp
 
 msgleft:
   ldi ZH, HIGH(leftmsg<<1)
   ldi ZL, LOW(leftmsg<<1)
-  rcall lcd_puts
-  rcall wait
-  rcall lcd_clear
+  rcall print
   rjmp movementcmp
 
 msgright:
   ldi ZH, HIGH(rightmsg<<1)
   ldi ZL, LOW(rightmsg<<1)
-  rcall lcd_puts
-  rcall wait
-  rcall lcd_clear
+  rcall print
   rjmp movementcmp
 
 msgstop:
   ldi ZH, HIGH(stopmsg<<1)
   ldi ZL, LOW(stopmsg<<1)
-  rcall lcd_puts
-  rcall wait
-  rcall lcd_clear
+  rcall print
   rjmp movementcmp
-
-pt1:
-  rjmp pt1 
-
-
-isr_int0:
-  lds r20, $6000 
-
-  mov r16, r23
-  rcall hex2asc
-  mov r16, r17
-  rcall lcd_putch
-  inc r23
-  ;sts $70, r17
-
-  reti
 
 ; subroutines
 ;
@@ -182,19 +148,32 @@ wait:
   rcall delay_big
   ret
 
+print:
+  rcall ln1 ; print command
+  rcall lcd_puts
+
+  rcall ln2 ; print battery level
+  lds r16, adclsb
+  rcall lcd_putch
+  lds r16, adcmsb
+  rcall lcd_putch
+
+  rcall wait
+  ret
+
 ; -------
 ; data bytes
+; the extra 0s at the end are for padding
 bootmsg:     .db "VisionVroom", 1, "Areg Nakashian", 0, 0 
 wifimsg:     .db "Connecting to", 1, "WiFi", 0, 0
 wifigoodmsg: .db "WiFi Connected ", 1, "Successfully!", 0
-movemsg:     .db "Current CMD: " 0, 0
-foremsg:     .db "Foreward", 0, 0
-backmsg:     .db "Reverse", 0
-rightmsg:    .db "Right", 0
-leftmsg:     .db "Left", 0, 0
-stopmsg:     .db "Stop", 0, 0
-nullmsg:     .db "NULL", 0, 0
-automsg:     .db "auto mode ", 0
+foremsg:     .db "ESP32: Foreward", 0, 0
+backmsg:     .db "ESP32: Reverse", 0
+rightmsg:    .db "ESP32: Right", 0
+leftmsg:     .db "ESP32: Left", 0, 0
+stopmsg:     .db "ESP32: Stop", 0, 0
+nullmsg:     .db "ESP32: NULL", 0, 0
+automsg:     .db "ESP32: auto mode ", 0, 0
 
 ; includes
 .include "functions.inc"
