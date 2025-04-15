@@ -1,4 +1,4 @@
-#!bin/sh
+#!/bin/sh
 
 if (avra -I ./include/  main.asm); then
     sudo avrdude -c avrispmkII -p Atmega8515 -P usb -U flash:w:main.hex
