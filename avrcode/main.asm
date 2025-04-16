@@ -79,20 +79,31 @@ l1:
 
   ; convert hex adc value to dec
   ; to be removed, for testing purposes
-  mov r16, r20
+  lds r16, adchex
 
   rcall hex2asc
   sts test, r16
   mov r16, r17
   sts test2, r16
 
-  ldi r16, 255
+  lds r16, adchex
   rcall percent
+
+  ;clr r1
+  ;clr r3
+  ;ldi r16, 10
+  ;mov r0, r16
+
+  ;ldi r17, 5
+  ;mov r2, r17
+  ;rcall div16
+
+  ;mov r16, r0
 
   rcall hex2asc
   sts adclsb, r16
   mov r16, r17
-  sts adclsb, r16
+  sts adcmsb, r16
 
   ; get input and print correct message
   rcall getb
@@ -190,29 +201,68 @@ print:
 ; the *100 needs to be done before the division as it will give a fraction every time
 percent:
   subi r16, 192 ; read level - 192
+
   ldi r17, 100
   mul r16, r17
 
-  ldi r17, 63 ; divide by 63
-  rcall div16x8
+  clr r3
+  ldi r17, 63
+  mov r2, r17
+  rcall div16
 
+store:
   mov r16, r0  ; save percentage into r16
 
   ret
 
-; R16 / R17 = R16, Remainder R18
+
+; this is getting out of hand...
+; r1:r0 / r17 = r0, r1 is the remainder
+div16x8:
+    clr     r2
+    ldi     r16, 17
+
+div16x8loop:
+    rol     r0
+    rol     r1
+    dec     r16
+    breq    div16x8end
+
+    rol     r2
+    sub     r2, r17
+    brcc    div16x8skip
+
+    ; Restore remainder if subtraction failed
+    add     r2, r17
+    clc
+    rjmp    div16x8loop
+
+div16x8skip:
+    sec
+    rjmp    div16x8loop
+
+div16x8end:
+    rol     r0
+    mov     r1, r2
+    ret
+
+
+; R0 / R17 = R0,  Remainder R4
 div8:
-    clr     R18         ; Clear remainder
-    ldi     R19, 9      ; Loop counter (8 bits + 1 initial shift)
+    clr     r4          ; Clear remainder (like R5:R4 in 16-bit)
+    ldi     r16, 9      ; Loop counter (8 bits + 1 initial shift)
 
 div8loop:
-    rol     R16         ; Shift dividend
-    dec     R19         ; Decrement counter
-    breq    div8end     ; Exit if done
-    rol     R18         ; Shift remainder
-    sub     R18, R17    ; Subtract divisor from remainder
+    rol     r0          ; Shift dividend (like R1:R0 in 16-bit)
+    dec     r16
+    brne    div8cont    ; Continue if not done
+    ret                 ; Division complete
+
+div8cont:
+    rol     r4          ; Shift remainder (like R5:R4 in 16-bit)
+    sub     r4, r17     ; Subtract divisor (like R3:R2 in 16-bit)
     brcc    div8skip    ; Skip if remainder >= 0
-    add     R18, R17    ; Restore remainder if negative
+    add     r4, r17     ; Restore remainder if negative
     clc                 ; Clear Carry (quotient bit = 0)
     rjmp    div8loop
 
@@ -220,32 +270,6 @@ div8skip:
     sec                 ; Set Carry (quotient bit = 1)
     rjmp    div8loop
 
-div8end:
-    rol     R16         ; Final shift to set quotient
-    ret
-
-; this is getting out of hand...
-; r1:r0 / r17 = r0, r1 is the remainder
-div16x8:
-    ldi     r18, 17       ; Loop counter
-    clr     r2            ; Clear remainder high byte
-div16x8loop:
-    rol     r0            ; Shift dividend LSB
-    rol     r1            ; Shift dividend MSB
-    dec     r18
-    breq    div16x8end
-    rol     r2            ; Shift remainder
-    sub     r2, r17       ; Subtract divisor
-    brcc    div16x8skip
-    add     r2, r17       ; Restore if negative
-    clc
-    rjmp    div16x8loop
-div16x8skip:
-    sec
-    rjmp    div16x8loop
-div16x8end:
-    rol     r0            ; Final quotient shift
-    ret
 
 
 ; input:
