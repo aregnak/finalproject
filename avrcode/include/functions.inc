@@ -1,6 +1,6 @@
 ;
 ; Filename: functions.inc
-; 
+;
 ; Under the MIT licence: https://mit-license.org/
 ; Copyright holder: Areg Nakashian
 ;
@@ -14,23 +14,23 @@
 
 .equ BUSON = $8A     ; for bus init
 .equ BAUD = 25     ; for uart @1MHz, from Table 68 (p.160)
-.equ FRAME = $86    ; select data, parity, stop bit (p.156-158)      
+.equ FRAME = $86    ; select data, parity, stop bit (p.156-158)
 .equ CHAN = $18      ;Enable both Tx and Rx (UART)
 
 ; inits
-init_uart:                 
+init_uart:
     ldi R16, 0        ;always zero (mostly)
-    out UBRRH, R16    
-    ldi R16, BAUD    
-    out UBRRL, R16    ;config. Tx baud rate w/equ value 
-    ldi R16, CHAN      
+    out UBRRH, R16
+    ldi R16, BAUD
+    out UBRRL, R16    ;config. Tx baud rate w/equ value
+    ldi R16, CHAN
     out UCSRB, R16    ;enable transmit only (see p.156)
-    ldi R16, FRAME         
-    out UCSRC, R16    ;config. frame elements      
-    ret                 
+    ldi R16, FRAME
+    out UCSRC, R16    ;config. frame elements
+    ret
 
 init_bus:
-	ldi R16, $C0 ; for int0 falling edge & int1 falling edge        
+	ldi R16, $C0 ; for int0 falling edge & int1 falling edge
 	out GICR,R16
     ldi R16, BUSON
 	out MCUCR, R16
@@ -39,23 +39,23 @@ init_bus:
 init_lcd:             ; 2 lines, 8-bit
 	ldi XH, $4e
 	ldi XL, $20
-	rcall delay_big 
+	rcall delay_big
 
 	ldi r18, $38
 	sts $2000, R18
 	ldi r19, 13 ; ~37u delay
-	rcall delay	 
+	rcall delay
 
 	ldi r18, $38
 	sts $2000, R18
 	ldi r19, 13 ; ~37u delay
-	rcall delay	
+	rcall delay
 
 	ldi r18, $0f
 	sts $2000, R18
 	ldi r19, 13 ; ~37u delay
 	rcall delay
-	
+
 	ldi r18, $01
 	sts $2000, R18
 	ldi XH, $2     ; $2f8 makes 1.52ms delay
@@ -65,7 +65,7 @@ init_lcd:             ; 2 lines, 8-bit
 	ldi r18, $06
 	sts $2000, R18
 	ldi r19, 13		; ~37u delay
-	rcall delay	
+	rcall delay
     ret
 
 ; -----------
@@ -75,17 +75,17 @@ delay:				; for numbers < $100
 	brne delay
 	ret
 
-delay_big:			; for numbers > $ff to $ffff 
+delay_big:			; for numbers > $ff to $ffff
 	sbiw XH:XL, 1   ; 4us per loop
-	brne delay_big		
+	brne delay_big
 	ret
 
-delay_bigger:			; for numbers > ffff to $fffff 
+delay_bigger:			; for numbers > ffff to $fffff
 	sbiw XH:XL, 1   	; 4us per loop
 	brne delay_bigger
-  bigger2:				
+  bigger2:
 	subi r23, 1			; 3us every time it runs
-	brne delay_bigger		
+	brne delay_bigger
 	ret
 
 ; -----------
@@ -98,7 +98,7 @@ getch:
 	in r16,UCSRA
 	andi r16, $80
 	breq getch		   ;poll status for key press
-	in r16,UDR      ;get char from UART 
+	in r16,UDR      ;get char from UART
 	ret
 
 outch:
@@ -117,12 +117,12 @@ nl: 				; print new line
     ret
 
 cout:		; i love c++ again
-	lpm r16, Z+ 
-	cpi r16, 0 
-	breq return 
+	lpm r16, Z+
+	cpi r16, 0
+	breq return
 	cpi r16, 1
 	breq coutnl
-	rcall outch 
+	rcall outch
 	rjmp cout
   coutnl:
     rcall nl
@@ -139,7 +139,7 @@ ln1:
 	ldi r18, $80
 	sts $2000, R18
 	ldi r19, 19 ; ~37u delay
-	rcall delay	
+	rcall delay
 	pop r18
 	ret
 
@@ -148,7 +148,7 @@ ln2:
 	ldi r18, $C0
 	sts $2000, R18
 	ldi r19, 19 ; ~37u delay
-	rcall delay	
+	rcall delay
 	pop r18
 	ret
 
@@ -170,7 +170,7 @@ lcd_puts:
 	mov r16, r17
 	rcall outch
 
-  lcd_puts_cont:	
+  lcd_puts_cont:
 	sts $2100, r17
 	ldi XH, $1		; for delay
 	ldi XL, $f4
@@ -200,7 +200,7 @@ lcd_puts:
 ; lcd display a character
 lcd_putch:
 	sts $2100, r16
-	ldi XH, $1		
+	ldi XH, $1
 	ldi XL, $f4
 	rcall delay_big
 	ret
@@ -218,7 +218,7 @@ asc2bin:
     cpi r16, '0'          ; check for '0'-'9'
     brlo invalid    ; branch if less than '0'
     cpi r16, '9' + 1
-    brlo numconv 
+    brlo numconv
 
     ; check for uppercase 'A'-'F'
     cpi r16, 'A'
@@ -241,7 +241,53 @@ asc2bin:
 
   numconv:
     subi r16, '0'         ; convert '0'-'9'
- 
+
   invalid:
     ret
 
+
+hex2dec:
+	clr r2
+	clr r1
+	clr r0
+
+h2dh:
+	cpi r16, 100
+	brlo h2dt
+	subi r16, 100
+	inc r2
+	rjmp h2dh
+
+h2dt:
+	cpi r16, 10
+	brlo h2do
+	subi r16, 10
+	inc r1
+	rjmp h2dt
+
+h2do:
+	mov r0, r16
+	ret
+
+hex2asc:
+	mov r0, r16
+
+	swap r16
+	andi r16, $0f
+	subi r16, -'0'
+	cpi r16, '9' + 1
+	brlo storeh
+	subi r16, '9' + 1 - 'A'
+
+storeh:
+	mov r17, r16
+
+	mov r16, r0
+	andi r16, $0f
+	subi r16, -'0'
+	cpi r16, '9' + 1
+	brlo h2ad
+	subi r16, '9' + 1 - 'A'
+
+h2ad:
+	ret

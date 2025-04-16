@@ -5,6 +5,9 @@
 adclsb: .byte 1 ; at $60
 adcmsb: .byte 1 ; at $61
 adchex: .byte 1 ; at $62
+bat0:   .byte 1
+bat1:   .byte 1
+bat2:   .byte 1
 
 test: .byte 1 ; at $60
 test2: .byte 1 ; at $61
@@ -59,7 +62,6 @@ wifigood:
 
 movementcmp:
   rcall lcd_clear
-  rcall ln2 ; for battery percentage
 
   ; clear input register
   clr r20
@@ -89,21 +91,15 @@ l1:
   lds r16, adchex
   rcall percent
 
-  ;clr r1
-  ;clr r3
-  ;ldi r16, 10
-  ;mov r0, r16
+  rcall hex2dec
+  sts bat0, r0
+  sts bat1, r1
+  sts bat2, r2
 
-  ;ldi r17, 5
-  ;mov r2, r17
-  ;rcall div16
-
-  ;mov r16, r0
-
-  rcall hex2asc
-  sts adclsb, r16
-  mov r16, r17
-  sts adcmsb, r16
+;  rcall hex2asc
+;  sts adclsb, r16
+;  mov r16, r17
+;  sts adcmsb, r16
 
   ; get input and print correct message
   rcall getb
@@ -171,13 +167,30 @@ wait:
   ret
 
 print:
+  rcall lcd_clear
   rcall ln1 ; print command
   rcall lcd_puts
 
   rcall ln2 ; print battery level
-  lds r16, adclsb
+
+  ;lds r16, adclsb
+  ;rcall lcd_putch
+  ;lds r16, adcmsb
+  ;rcall lcd_putch
+
+  lds r16, bat2
+  subi r16, -'0'
   rcall lcd_putch
-  lds r16, adcmsb
+
+  lds r16, bat1
+  subi r16, -'0'
+  rcall lcd_putch
+
+  lds r16, bat0
+  subi r16, -'0'
+  rcall lcd_putch
+
+  ldi r16, '%'
   rcall lcd_putch
 
   ldi r16, ' '
@@ -223,25 +236,25 @@ zero:
 
 ; R0 / R17 = R0,  Remainder R4
 div8:
-    clr     r4          ; Clear remainder (like R5:R4 in 16-bit)
-    ldi     r16, 9      ; Loop counter (8 bits + 1 initial shift)
+    clr     r4
+    ldi     r16, 9
 
 div8loop:
-    rol     r0          ; Shift dividend (like R1:R0 in 16-bit)
+    rol     r0
     dec     r16
-    brne    div8cont    ; Continue if not done
-    ret                 ; Division complete
+    brne    div8cont
+    ret
 
 div8cont:
-    rol     r4          ; Shift remainder (like R5:R4 in 16-bit)
-    sub     r4, r17     ; Subtract divisor (like R3:R2 in 16-bit)
-    brcc    div8skip    ; Skip if remainder >= 0
-    add     r4, r17     ; Restore remainder if negative
-    clc                 ; Clear Carry (quotient bit = 0)
+    rol     r4
+    sub     r4, r17
+    brcc    div8skip
+    add     r4, r17
+    clc
     rjmp    div8loop
 
 div8skip:
-    sec                 ; Set Carry (quotient bit = 1)
+    sec
     rjmp    div8loop
 
 
@@ -284,7 +297,6 @@ divskip:
   rjmp divloop
 
 
-
 ; -------
 ; data bytes
 ; the extra 0s at the end are for padding
@@ -301,6 +313,6 @@ automsg:     .db "ESP32: auto mode ", 0, 0
 
 ; includes
 .include "functions.inc"
-.include "numio.inc"
+;.include "numio.inc"
 
 .exit
