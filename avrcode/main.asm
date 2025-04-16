@@ -78,20 +78,21 @@ l1:
   sts adchex, r20 ; store hex value to memory
 
   ; convert hex adc value to dec
+  ; to be removed, for testing purposes
   mov r16, r20
-  rcall hex2asc
 
+  rcall hex2asc
   sts test, r16
   mov r16, r17
   sts test2, r16
 
+  ldi r16, 255
+  rcall percent
 
-
-  mov r16, r4
   rcall hex2asc
   sts adclsb, r16
   mov r16, r17
-  sts adcmsb, r16
+  sts adclsb, r16
 
   ; get input and print correct message
   rcall getb
@@ -184,17 +185,67 @@ print:
 ; calculate battery percentage of a 9v batter in the range of 9.7v-7.2v (0xff-0xc0)
 ; input: r16 should have adc level in hex
 ; output: r16 with the percentage in hex
+
+; percentage = ((adc value - 192) * 100) / 63
+; the *100 needs to be done before the division as it will give a fraction every time
 percent:
   subi r16, 192 ; read level - 192
-  ldi r17, 63   ; 255 - 192
-
-  rcall div8
-
-  ldi r17, 100 ; multiply by 100 for percentage
+  ldi r17, 100
   mul r16, r17
+
+  ldi r17, 63 ; divide by 63
+  rcall div16x8
+
   mov r16, r0  ; save percentage into r16
 
   ret
+
+; R16 / R17 = R16, Remainder R18
+div8:
+    clr     R18         ; Clear remainder
+    ldi     R19, 9      ; Loop counter (8 bits + 1 initial shift)
+
+div8loop:
+    rol     R16         ; Shift dividend
+    dec     R19         ; Decrement counter
+    breq    div8end     ; Exit if done
+    rol     R18         ; Shift remainder
+    sub     R18, R17    ; Subtract divisor from remainder
+    brcc    div8skip    ; Skip if remainder >= 0
+    add     R18, R17    ; Restore remainder if negative
+    clc                 ; Clear Carry (quotient bit = 0)
+    rjmp    div8loop
+
+div8skip:
+    sec                 ; Set Carry (quotient bit = 1)
+    rjmp    div8loop
+
+div8end:
+    rol     R16         ; Final shift to set quotient
+    ret
+
+; this is getting out of hand...
+; r1:r0 / r17 = r0, r1 is the remainder
+div16x8:
+    ldi     r18, 17       ; Loop counter
+    clr     r2            ; Clear remainder high byte
+div16x8loop:
+    rol     r0            ; Shift dividend LSB
+    rol     r1            ; Shift dividend MSB
+    dec     r18
+    breq    div16x8end
+    rol     r2            ; Shift remainder
+    sub     r2, r17       ; Subtract divisor
+    brcc    div16x8skip
+    add     r2, r17       ; Restore if negative
+    clc
+    rjmp    div16x8loop
+div16x8skip:
+    sec
+    rjmp    div16x8loop
+div16x8end:
+    rol     r0            ; Final quotient shift
+    ret
 
 
 ; input:
@@ -235,29 +286,6 @@ divskip:
   rjmp divloop
 
 
-; R16 / R17 = R16, Remainder R18
-div8:
-    clr     R18         ; Clear remainder
-    ldi     R19, 9      ; Loop counter (8 bits + 1 initial shift)
-
-div8loop:
-    rol     R16         ; Shift dividend
-    dec     R19         ; Decrement counter
-    breq    div8end     ; Exit if done
-    rol     R18         ; Shift remainder
-    sub     R18, R17    ; Subtract divisor from remainder
-    brcc    div_skip    ; Skip if remainder >= 0
-    add     R18, R17    ; Restore remainder if negative
-    clc                 ; Clear Carry (quotient bit = 0)
-    rjmp    div8loop
-
-div8skip:
-    sec                 ; Set Carry (quotient bit = 1)
-    rjmp    div8loop
-
-div8end:
-    rol     R16         ; Final shift to set quotient
-    ret
 
 ; -------
 ; data bytes
