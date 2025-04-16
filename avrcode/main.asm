@@ -201,6 +201,8 @@ print:
 ; the *100 needs to be done before the division as it will give a fraction every time
 percent:
   subi r16, 192 ; read level - 192
+  brcs zero ; if less than 0, display 0%
+  breq zero ; if equal to 0, display 0%
 
   ldi r17, 100
   mul r16, r17
@@ -212,39 +214,11 @@ percent:
 
 store:
   mov r16, r0  ; save percentage into r16
-
   ret
 
-
-; this is getting out of hand...
-; r1:r0 / r17 = r0, r1 is the remainder
-div16x8:
-    clr     r2
-    ldi     r16, 17
-
-div16x8loop:
-    rol     r0
-    rol     r1
-    dec     r16
-    breq    div16x8end
-
-    rol     r2
-    sub     r2, r17
-    brcc    div16x8skip
-
-    ; Restore remainder if subtraction failed
-    add     r2, r17
-    clc
-    rjmp    div16x8loop
-
-div16x8skip:
-    sec
-    rjmp    div16x8loop
-
-div16x8end:
-    rol     r0
-    mov     r1, r2
-    ret
+zero:
+  ldi r16, 0 ; zero out the output
+  ret
 
 
 ; R0 / R17 = R0,  Remainder R4
