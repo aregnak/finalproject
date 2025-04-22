@@ -137,6 +137,7 @@ def process_image(frame_data):
     
     if lines is not None:
 
+# old line tracking logic
 #        x1, y1, x2, y2 = lines[0][0]
 #
 #        # Draw line on image (optional)
@@ -165,9 +166,9 @@ def process_image(frame_data):
         center = width // 2
         
         if avg_x > center + 20:
-            current_command = "RIGHT"
-        elif avg_x < center - 20: 
             current_command = "LEFT"
+        elif avg_x < center - 20: 
+            current_command = "RIGHT"
         else:
             current_command = "FORWARD"
 
