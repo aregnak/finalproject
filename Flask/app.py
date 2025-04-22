@@ -14,7 +14,7 @@ processed_frame_queue = queue.Queue(maxsize=10)
 current_command = "STOP"
 current_speed = 0  # Default speed (0-100%)
 auto_mode = False  #auto mode is disabled
-headlight_state = False # Headlights off
+headlights_on = False # Headlights off
 
 @app.route('/')
 def index():
@@ -97,12 +97,18 @@ def toggle_auto_mode():
     else:
         return jsonify(status="error", message="No auto_mode provided"), 400
 
-@app.route('/toggle_headlights', methods=['GET'])
-def toggle_headlights():
-    global headlight_state
-    headlight_state = not headlight_state
-    state = "on" if headlight_state else "off"
-    return jsonify({"headlights": state})
+#@app.route('/set_headlights', methods=['POST'])
+#def toggle_headlights():
+#    global headlights_on
+#    data = request.json
+#    if 'headlights_on' in data:
+#        headlights_on = data['headlights_on']
+#        return jsonify(status="success", headlights_on=headlights_on)
+#    return jsonify(status="error"), 400
+#
+#@app.route('/toggle_headlights', methods=['GET'])
+#def get_headlights_state():
+#    return jsonify(headlights_on=headlights_on)
 
 def process_image(frame_data):
     """Process the image to detect the line and update the command."""

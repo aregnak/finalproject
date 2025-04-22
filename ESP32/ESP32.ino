@@ -12,7 +12,6 @@ const char* ssid = ssidd;
 const char* password = passwordd;
 
 String serveraddr = serveraddrr;
-String upload_frame_url = upload_frame_urll;
 
 // Motor 1
 int motor1Pin1 = 19;
@@ -34,6 +33,7 @@ int headlightPin = 41;
 const int freq = 30000;
 int dutyCycle = 0;  // PWM duty cycle for motor speed
 int dcBuf = 0;
+bool headlightsState = false;
 
 // check speed while turning, as it is hard to turn when less than 30% speed
 void checkSpeed() {
@@ -248,7 +248,7 @@ void loop() {
     // Send the frame to the Flask server
     HTTPClient http;
 
-    http.begin(upload_frame_url);
+    http.begin(serveraddr + "/upload_frame");
     http.addHeader("Content-Type", "image/jpeg");
     int httpCode = http.POST(fb->buf, fb->len);
 
@@ -272,7 +272,9 @@ void loop() {
       //Serial.println("received control: " + payload);
 
       StaticJsonDocument<200> doc;  // Adjust the size as needed
+      //DynamicJsonDocument doc(128);
       DeserializationError error = deserializeJson(doc, payload);
+
 
       if (!error) {
         String command = doc["command"];
@@ -331,15 +333,14 @@ void loop() {
       StaticJsonDocument<200> doc;
       deserializeJson(doc, payload);
 
-  
-      const char* lights = doc["headlights"];
 
-      if (strcmp(lights, "on") == 0) {
-        digitalWrite(headlightPin, HIGH);
-      } else {
-        digitalWrite(headlightPin, LOW);
+      bool newState = doc["headlights_on"];
+
+      if (newState != headlightsState)
+      {
+        headlightsState = newState;
+        digitalWrite(headlightPin, headlightsState ? HIGH : LOW);
       }
-      //digitalWrite(headlightPin, lights ? HIGH : LOW);
     }
 
     http.end();  // get headlights
