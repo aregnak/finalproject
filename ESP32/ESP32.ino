@@ -331,14 +331,13 @@ void loop() {
       StaticJsonDocument<200> doc;
       deserializeJson(doc, payload);
 
-      bool lights = doc["headlights"];
+  
+      const char* lights = doc["headlights"];
 
-      if (strcmp(state, "on") == 0) {
+      if (strcmp(lights, "on") == 0) {
         digitalWrite(headlightPin, HIGH);
-        Serial.println("Headlights ON");
       } else {
         digitalWrite(headlightPin, LOW);
-        Serial.println("Headlights OFF");
       }
       //digitalWrite(headlightPin, lights ? HIGH : LOW);
     }
