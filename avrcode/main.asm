@@ -1,3 +1,9 @@
+; My final project, VisionVroom, AVR assembly code
+; this program is a monitorin system of inputs received from the esp32 car controller
+; also displays a battery's level from a range of 9.7v to 7.2v (100%-0%)
+
+
+; remove the line below if assembling on microchip studio
 .include "m8515def.inc"
 
 .dseg
@@ -5,12 +11,9 @@
 adclsb: .byte 1 ; at $60
 adcmsb: .byte 1 ; at $61
 adchex: .byte 1 ; at $62
-bat0:   .byte 1
-bat1:   .byte 1
-bat2:   .byte 1
-
-test: .byte 1 ; at $60
-test2: .byte 1 ; at $61
+bat0:   .byte 1 ; at $63
+bat1:   .byte 1 ; you get it they're all after the other
+bat2:   .byte 1 ; no...
 
 .cseg
 reset: rjmp init     ;used as an entry point for the reset
@@ -34,14 +37,14 @@ bootmessage:
   ldi ZH, HIGH(bootmsg<<1)
 	ldi ZL, LOW(bootmsg<<1)
   rcall lcd_puts
-  ldi r23, $4
+  ldi r23, $4               ; a delay to properly see welcome message
   ldi XH, $ff
   ldi XL, $ff
   rcall delay_bigger
   rcall lcd_clear
 
 wificmp:
-  rcall getb
+  rcall getb          ; get portb input
   cpi r16, $01
   breq wifigood
   rcall ln1
@@ -51,6 +54,8 @@ wificmp:
   rcall wait
   rcall lcd_clear
   ;rjmp wificmp  ; loop connecting message until connected
+  ;
+  ; UNCOMMENT THAT^^^^^ !!!!!!!!!!!!!!!!!!!!!
 
 wifigood:
   rcall ln1
@@ -60,97 +65,103 @@ wifigood:
   rcall lcd_puts
   rcall wait
 
-movementcmp:
-  rcall lcd_clear
-
-  ; clear input register
-  clr r20
-loop:
+main:
   ; start adc
   sts $6000, r1
 
-l1:
+loop:
   ; check for adc input
   in r20, PINB
   andi r20, $8
   cpi r20, $1
-  breq l1 ; loop while nothing received
+  breq loop     ; loop while nothing received
 
-  lds r20, $6000 ; store adc value into r20
-  sts adchex, r20 ; store hex value to memory
+  lds r16, $6000 ; store adc value into r20
 
-  ; convert hex adc value to dec
-  ; to be removed, for testing purposes
-  lds r16, adchex
+; uncomment if you want the raw adc hex input converted to ascii
+;  rcall hex2asc
+;  sts test, r16
+;  mov r16, r17
+;  sts test2, r16
 
-  rcall hex2asc
-  sts test, r16
-  mov r16, r17
-  sts test2, r16
-
-  lds r16, adchex
+; call percent calculation subroutine
   rcall percent
 
+; convert hex value (on r16) to decimal
   rcall hex2dec
-  sts bat0, r0
+  sts bat0, r0 ; store for later use
   sts bat1, r1
   sts bat2, r2
 
-;  rcall hex2asc
-;  sts adclsb, r16
-;  mov r16, r17
-;  sts adcmsb, r16
-
-  ; get input and print correct message
+  ; get directional message
   rcall getb
   cpi r16, $02
   breq msgfore
+
+  rcall getb
   cpi r16, $03
   breq msgback
+
+  rcall getb
   cpi r16, $04
   breq msgleft
+
+  rcall getb
   cpi r16, $05
   breq msgright
+
+  rcall getb
   cpi r16, $06
   breq msgstop
 
-  ; default to NULL
+  ; default to NULL message
 msgnull:
   ldi ZH, HIGH(nullmsg<<1)
   ldi ZL, LOW(nullmsg<<1)
   rcall print
-  rjmp movementcmp
+  rjmp main
 
 msgfore:
   ldi ZH, HIGH(foremsg<<1)
   ldi ZL, LOW(foremsg<<1)
   rcall print
-  rjmp movementcmp
+  rjmp main
 
 msgback:
   ldi ZH, HIGH(backmsg<<1)
   ldi ZL, LOW(backmsg<<1)
   rcall print
-  rjmp movementcmp
+  rjmp main
 
 msgleft:
   ldi ZH, HIGH(leftmsg<<1)
   ldi ZL, LOW(leftmsg<<1)
   rcall print
-  rjmp movementcmp
+  rjmp main
 
 msgright:
   ldi ZH, HIGH(rightmsg<<1)
   ldi ZL, LOW(rightmsg<<1)
   rcall print
-  rjmp movementcmp
+  rjmp main
 
 msgstop:
   ldi ZH, HIGH(stopmsg<<1)
   ldi ZL, LOW(stopmsg<<1)
   rcall print
-  rjmp movementcmp
+  rjmp main
 
+msgauto:
+  ldi ZH, HIGH(automsg<<1)
+  ldi ZL, LOW(automsg<<1)
+  rcall print
+  rjmp main
+
+failsafeloop:
+  rjmp failsafeloop
+  ; very failsafe, in case something catastrophic happens
+
+;-----------------------------
 ; subroutines
 ;
 ; get the input on pinb
@@ -166,17 +177,18 @@ wait:
   rcall delay_big
   ret
 
+; little sbr that contains all printing to lcd in one place
 print:
   rcall lcd_clear
   rcall ln1 ; print command
   rcall lcd_puts
 
+  ; will display:
+  ; BAT0: xxx%
   rcall ln2 ; print battery level
-
-  ;lds r16, adclsb
-  ;rcall lcd_putch
-  ;lds r16, adcmsb
-  ;rcall lcd_putch
+  ldi ZH, HIGH(batmsg<<1)
+  ldi ZL, LOW(batmsg<<1)
+  rcall lcd_puts
 
   lds r16, bat2
   subi r16, -'0'
@@ -192,15 +204,6 @@ print:
 
   ldi r16, '%'
   rcall lcd_putch
-
-  ldi r16, ' '
-  rcall lcd_putch
-
-  lds r16, test
-  rcall lcd_putch
-  lds r16, test2
-  rcall lcd_putch
-
 
   rcall wait
   ret
@@ -257,8 +260,6 @@ div8skip:
     sec
     rjmp    div8loop
 
-
-
 ; input:
 ; R1:R0 (dividend)
 ; R3:R2 (divisor)
@@ -297,22 +298,21 @@ divskip:
   rjmp divloop
 
 
-; -------
+; -------------------------------------
 ; data bytes
-; the extra 0s at the end are for padding
-bootmsg:     .db "VisionVroom", 1, "Areg Nakashian", 0, 0
-wifimsg:     .db "Connecting to", 1, "WiFi", 0, 0
+bootmsg:     .db "VisionVroom", 1, "Areg Nakashian", 0
+wifimsg:     .db "Connecting to", 1, "WiFi", 0
 wifigoodmsg: .db "WiFi Connected ", 1, "Successfully!", 0
-foremsg:     .db "ESP32: Foreward", 0, 0
+foremsg:     .db "ESP32: Foreward", 0
 backmsg:     .db "ESP32: Reverse", 0
 rightmsg:    .db "ESP32: Right", 0
-leftmsg:     .db "ESP32: Left", 0, 0
-stopmsg:     .db "ESP32: Stop", 0, 0
-nullmsg:     .db "ESP32: NULL", 0, 0
-automsg:     .db "ESP32: auto mode ", 0, 0
+leftmsg:     .db "ESP32: Left", 0
+stopmsg:     .db "ESP32: Stop", 0
+nullmsg:     .db "ESP32: NULL", 0
+automsg:     .db "ESP32: auto mode ", 0
+batmsg:      .db "BAT0: ", 0
 
 ; includes
 .include "functions.inc"
-;.include "numio.inc"
 
 .exit

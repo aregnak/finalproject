@@ -13,9 +13,8 @@ processed_frame_queue = queue.Queue(maxsize=10)
 # Default command and speed
 current_command = "STOP"
 current_speed = 0  # Default speed (0-100%)
-
-# Auto mode state
-auto_mode = False  # Default: auto mode is disabled
+auto_mode = False  #auto mode is disabled
+headlight_state = False # Headlights off
 
 @app.route('/')
 def index():
@@ -98,71 +97,87 @@ def toggle_auto_mode():
     else:
         return jsonify(status="error", message="No auto_mode provided"), 400
 
+@app.route('/headlights', methods=['POST'])
+def toggle_headlights():
+    global headlight_state
+    headlight_state = not headlight_state
+    return jsonify(status="success", headlights = headlight_state)
+
+@app.route('/get_headlights', methods=['GET'])
+def get_headlight():
+    return jsonify(headlights=headlight_state)
+
 def process_image(frame_data):
     """Process the image to detect the line and update the command."""
     global current_command
 
-    # Convert the frame data to a NumPy array
-    nparr = np.frombuffer(frame_data, np.uint8)
-    image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    try:
+        nparr = np.frombuffer(frame_data, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img is None:
+            current_command = "STOP"
+            return frame_data
+    except:
+        current_command = "STOP"
+        return frame_data
 
-    # Convert to grayscale
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    # Apply Gaussian blur
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-
-    # Apply binary thresholding
-    #_, binary = cv2.threshold(blurred, 127, 255, cv2.THRESH_BINARY_INV)
-
-    binary = cv2.adaptiveThreshold(
-            blurred, 255,
-            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            cv2.THRESH_BINARY_INV, 11, 2)
-
-
-    # Detect edges
-    edges = cv2.Canny(binary, 50, 150)
-
-    # Detect lines using Hough Transform
-    # lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=50, minLineLength=5, maxLineGap=10)
-
-    # New function allowing for better angle filtering
-    valid_lines = []
-    for line in lines:
-        x1, y1, x2, y2 = line[0]
-        angle = np.arctan2(y2 - y1, x2 - x1) * 180 / np.pi
-        if abs(angle) < 15: 
-            valid_lines.append(line)
-
+    height, width = img.shape[:2]
+    roi = img[height//2:, :]
+    
+    # Filter for white and detect edges
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    lower_white = np.array([0, 0, 200])
+    upper_white = np.array([180, 50, 255])
+    mask = cv2.inRange(hsv, lower_white, upper_white)
+    blurred = cv2.GaussianBlur(mask, (15, 15), 0)
+    edges = cv2.Canny(blurred, 100, 150)
+    
+    # Detect lines
+    lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=35, minLineLength=5, maxLineGap=10)
+    
     if lines is not None:
-        # Calculate error (deviation from center)
-        if lines is not None:
-            avg_x1 = np.mean([line[0][0] for line in lines])
-            avg_x2 = np.mean([line[0][2] for line in lines])
-            line_center = (avg_x1 + avg_x2) // 2
-        #line = lines[0][0]  # Take the first detected line
-            line_center = (line[0] + line[2]) // 2
-            image_center = image.shape[1] // 2
-            error = line_center - image_center
 
-        # Determine the command based on the error
-        if error > 50: 
+#        x1, y1, x2, y2 = lines[0][0]
+#
+#        # Draw line on image (optional)
+#        cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+#        
+#        # Simple steering logic
+#        center = img.shape[1] // 2
+#        line_center = (x1 + x2) // 2
+#        
+#        if line_center > center + 50:
+#            current_command = "RIGHT"
+#        elif line_center < center - 50:
+#            current_command = "LEFT"
+#        else:
+#            current_command = "FORWARD"
+        all_x = []
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            all_x.extend([x1, x2])
+
+            cv2.line(img, (x1, height//2 + y1),
+                     (x2, height//2 + y2),
+                     (0, 255, 0), 1)
+
+        avg_x = np.mean(all_x)
+        center = width // 2
+        
+        if avg_x > center + 20:
             current_command = "RIGHT"
-        elif error < -50:  
+        elif avg_x < center - 20: 
             current_command = "LEFT"
         else:
             current_command = "FORWARD"
 
-        # Draw the detected line on the image
-        for line in lines:
-            x1, y1, x2, y2 = line[0]
-            cv2.line(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
-    else:
-        current_command = "STOP"  # No line detected
 
-    # Encode the modified image as JPEG
-    _, jpeg = cv2.imencode('.jpg', image)
+        cv2.line(img, (center, height), (center, height//2), (0,0,255), 1)  # Center line
+        cv2.putText(img, current_command, (width-100, 30), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,0,255), 2)
+   
+   # Return original image with detected line drawn
+    _, jpeg = cv2.imencode('.jpg', img)
     return jpeg.tobytes()
 
 def generate_raw_frames():
@@ -206,5 +221,5 @@ def processed_video_feed():
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 if __name__ == '__main__':
-    app.run(host='192.168.18.14', port=4440, debug=True)
-   #app.run(host='192.168.1.110', port=4440, debug=True)
+    #app.run(host='192.168.18.14', port=4440, debug=True)
+    app.run(host='192.168.1.110', port=4440, debug=True)

@@ -4,9 +4,9 @@
 #include "esp_camera.h"
 #include "config.h"
 
-//#define CAMERA_MODEL_ESP32S3_EYE // Has PSRAM
+#define CAMERA_MODEL_ESP32S3_EYE // Has PSRAM
 
-// #include "camera_pins.h"
+#include "camera_pins.h"
 
 const char* ssid = ssidd;
 const char* password = passwordd;
@@ -28,6 +28,8 @@ int enable2Pin = 45;
 int PB0 = 38;
 int PB1 = 39;
 int PB2 = 40;
+
+int headlightPin = 2;
 
 const int freq = 30000;
 int dutyCycle = 0;  // PWM duty cycle for motor speed
@@ -52,10 +54,10 @@ void handleReverse()
   digitalWrite(motor1Pin2, HIGH);
   digitalWrite(motor2Pin1, LOW);
   digitalWrite(motor2Pin2, HIGH);
- 
-  digitalWrite(PB0, HIGH);
+
+  digitalWrite(PB0, LOW);
   digitalWrite(PB1, HIGH);
-  digitalWrite(PB2, LOW);
+  digitalWrite(PB2, HIGH);
 }
 
 void handleLeft()
@@ -66,9 +68,9 @@ void handleLeft()
   digitalWrite(motor2Pin1, LOW);
   digitalWrite(motor2Pin2, HIGH);
 
-  digitalWrite(PB0, LOW);
+  digitalWrite(PB0, HIGH);
   digitalWrite(PB1, LOW);
-  digitalWrite(PB2, HIGH);
+  digitalWrite(PB2, LOW);
 }
 
 void handleRight()
@@ -92,9 +94,9 @@ void handleStop()
   digitalWrite(motor2Pin1, LOW);
   digitalWrite(motor2Pin2, LOW);
 
-  digitalWrite(PB0, LOW);
+  digitalWrite(PB0, HIGH);
   digitalWrite(PB1, HIGH);
-  digitalWrite(PB2, HIGH);
+  digitalWrite(PB2, LOW);
 }
 
 void processControl(String command)
@@ -142,9 +144,15 @@ void setup()
   ledcWrite(enable2Pin, 0);
 
   // Initialize avr communication pins to 0
+  pinMode(PB0, OUTPUT);
+  pinMode(PB1, OUTPUT);
+  pinMode(PB2, OUTPUT);
+  pinMode(headlightPin, OUTPUT);
+
   digitalWrite(PB0, LOW);
   digitalWrite(PB1, LOW);
   digitalWrite(PB2, LOW);
+  digitalWrite(headlightPin, LOW);
 
   // Initialize the camera
   camera_config_t config;
@@ -201,7 +209,7 @@ void setup()
   s->set_vflip(s, 1); // flip it back
   s->set_brightness(s, 1); // up the brightness just a bit
   s->set_saturation(s, 0); // lower the saturation
-  // s->set_hmirror(s, 1);
+  s->set_hmirror(s, 1);
   s->set_dcw(s, 1);
 
   // Connect to Wi-Fi
@@ -236,19 +244,21 @@ void loop()
 
     // Send the frame to the Flask server
     HTTPClient http;
+
     http.begin(upload_frame_url);
     http.addHeader("Content-Type", "image/jpeg");
     int httpCode = http.POST(fb->buf, fb->len);
+
     if (httpCode == HTTP_CODE_OK)
     {
       //Serial.println("Frame uploaded successfully");
     }
-
     else
     {
       Serial.printf("Error uploading frame. HTTP code: %d\n", httpCode);
     }
-    http.end();
+    http.end(); // image/jpeg
+
 
     // Return the frame buffer to the camera
     esp_camera_fb_return(fb);
@@ -282,7 +292,7 @@ void loop()
       Serial.println("Error in speed request. Code: " + String(httpCode));
     }
 
-    http.end();
+    http.end(); // control
 
     http.begin(serveraddr + "/speed");
     httpCode = http.GET();
@@ -316,8 +326,22 @@ void loop()
     {
       Serial.println("Error in speed request. Code: " + String(httpCode));
     }
-    http.end();
-  }
 
-  //delay(100);  // Adjust the delay as needed
+    http.end(); // /speed
+
+    http.begin(serveraddr + "/get_headlights");
+    httpCode = http.GET();
+
+    if (httpCode == HTTP_CODE_OK)
+    {
+      String payload = http.getString();
+      StaticJsonDocument<50> doc;
+      deserializeJson(doc, payload);
+
+      bool lights = doc["headlights"];
+      digitalWrite(headlightPin, lights ? HIGH : LOW);
+    }
+
+    http.end(); // get headlights
+  }
 }
