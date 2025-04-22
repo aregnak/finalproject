@@ -5,3 +5,4 @@
 *.elf
 
 config.h
+send.sh
