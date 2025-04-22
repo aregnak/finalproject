@@ -4,5 +4,8 @@
 *.hex
 *.elf
 
+# vim swap files
+.swp
+
 config.h
 send.sh

@@ -97,15 +97,12 @@ def toggle_auto_mode():
     else:
         return jsonify(status="error", message="No auto_mode provided"), 400
 
-@app.route('/headlights', methods=['POST'])
+@app.route('/toggle_headlights', methods=['GET'])
 def toggle_headlights():
     global headlight_state
     headlight_state = not headlight_state
-    return jsonify(status="success", headlights = headlight_state)
-
-@app.route('/get_headlights', methods=['GET'])
-def get_headlight():
-    return jsonify(headlights=headlight_state)
+    state = "on" if headlight_state else "off"
+    return jsonify({"headlights": state})
 
 def process_image(frame_data):
     """Process the image to detect the line and update the command."""

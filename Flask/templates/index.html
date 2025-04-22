@@ -177,7 +177,15 @@
     <button class="button-27 stop" onclick="sendCommand('STOP')">Stop</button>
     </div>
 
-    <button class="button-27" onclick="toggleLights">Headlights</button>
+    <!--auto direction class because the formatting is the same -->
+    <div class="auto-direction">
+	    <p><strong>Headlights</strong></p>
+	    <label class="switch">
+		<input type="checkbox" id="lightToggle">
+		<span class="slider"></span>
+	    </label>
+    </div>
+
 
     <p>Motor Speed: <span id="motorSpeed">0</span>%</p>
     <input type="range" min="0" max="100" step="5" id="motorSlider" oninput="updateMotorSpeed(this.value)" value="0"/>
@@ -224,24 +232,6 @@
                 statusMessage.style.color = "red";
             }
         }
-
-	async function toggleLights() {
-		const btn = document.querySelector('.button-30');
-
-		btn.classList.toggle('active');
-		headlightsOn = !headlightsOn;
-		btn.textContent = headlightsOn ? 'Headlights ON' : 'Headlights';
-
-		fetch('/headlights', { method: 'POST' })
-			.then(response => response.json())
-			.then(data => {
-				if (data.headlights !== headlightsOn) {
-					headlightsOn = data.headlights;
-					btn.classList.toggle('active', headlightsOn);
-					btn.textContent = headlightsOn ? 'Headlights ON' : 'Headlights';  
-				}
-			})
-	}
 
         // Function to update motor speed
         async function updateMotorSpeed(value) {
