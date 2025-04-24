@@ -170,10 +170,14 @@
     <h1>ESP32 Control</h1>
     <p>Use the buttons below or the arrow keys and spacebar to control the car.</p>
     <div class=container>
-    <button class="button-27 up" onclick="sendCommand('FORWARD')">Forward</button>
-    <button class="button-27 down" onclick="sendCommand('REVERSE')">Reverse</button>
-    <button class="button-27 right" onclick="sendCommand('RIGHT')">Right</button>
-    <button class="button-27 left" onclick="sendCommand('LEFT')">Left</button>
+    <button class="button-27 up" onmousedown="sendCommand('FORWARD');" onmouseup="sendCommand('STOP');" ontouchstart="sendCommand('FORWARD');" ontouchend="sendCommand('STOP');">Forward</button>
+
+    <button class="button-27 down" onmousedown="sendCommand('REVERSE');" onmouseup="sendCommand('STOP');" ontouchstart="sendCommand('REVERSE');" ontouchend="sendCommand('STOP');">Reverse</button>
+
+    <button class="button-27 right" onmousedown="sendCommand('RIGHT');" onmouseup="sendCommand('STOP');" ontouchstart="sendCommand('RIGHT');" ontouchend="sendCommand('STOP');">Right</button>
+
+    <button class="button-27 left" onmousedown="sendCommand('LEFT');" onmouseup="sendCommand('STOP');" ontouchstart="sendCommand('LEFT');" ontouchend="sendCommand('STOP');">Left</button>
+
     <button class="button-27 stop" onclick="sendCommand('STOP')">Stop</button>
     </div>
 
