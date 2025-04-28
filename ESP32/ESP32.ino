@@ -307,7 +307,7 @@ void loop() {
         Serial.println("Extracted speed: " + String(speed));
 
         // Map speed to PWM duty cycle (0-100% to 0-255)
-        dutyCycle = map(speed, 0, 100, 155, 255);
+        dutyCycle = map(speed, 0, 100, 135, 255);
         //dcBuf = dutyCycle;
         //Serial.println("Calculated duty cycle: " + String(dutyCycle));
 

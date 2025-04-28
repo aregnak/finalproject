@@ -9,6 +9,7 @@
 	    font-family: "JetBrains Mono",monospace;
             text-align: center;
             margin-top: 50px;
+	    -webkit-user-select: none;
         }
 
 	.container {
@@ -167,7 +168,7 @@
     </style>
 </head>
 <body>
-    <h1>ESP32 Control</h1>
+    <h1>VisionVroom Control Center</h1>
     <p>Use the buttons below or the arrow keys and spacebar to control the car.</p>
     <div class=container>
     <button class="button-27 up" onmousedown="sendCommand('FORWARD');" onmouseup="sendCommand('STOP');" ontouchstart="sendCommand('FORWARD');" ontouchend="sendCommand('STOP');">Forward</button>
@@ -208,11 +209,6 @@
 	    <!-- <img class="video-stream" src="/raw_video_feed" alt="Raw Video Stream"> -->
         <img class="video-stream" src="/processed_video_feed" alt="Processed Video Stream">
     </div>
-
-    <div class="debuginfo">
-	<p>Auto Direction: <span id="autoDirection">###</span></p>
-    </div>
-	
 
     <script>
         // Function to send commands to the server

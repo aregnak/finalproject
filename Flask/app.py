@@ -7,7 +7,6 @@ import numpy as np
 app = Flask(__name__)
 
 # Queues to store raw and processed video frames
-raw_frame_queue = queue.Queue(maxsize=10)
 processed_frame_queue = queue.Queue(maxsize=10)
 
 # Default command and speed
@@ -74,12 +73,9 @@ def upload_frame():
         # Process the frame to detect the line (if auto mode is enabled)
         processed_frame = process_image(frame) if auto_mode else frame
 
-        if raw_frame_queue.full():
-            raw_frame_queue.get()  # Discard the oldest frame if the queue is full
         if processed_frame_queue.full():
             processed_frame_queue.get()  # Discard the oldest frame if the queue is full
 
-        raw_frame_queue.put(frame)
         processed_frame_queue.put(processed_frame)
         return jsonify(status="success")
     except Exception as e:
@@ -184,20 +180,6 @@ def process_image(frame_data):
     _, jpeg = cv2.imencode('.jpg', img)
     return jpeg.tobytes()
 
-def generate_raw_frames():
-    """Generator function to stream raw video frames."""
-    while True:
-        try:
-            if not raw_frame_queue.empty():
-                frame = raw_frame_queue.get()
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-            else:
-                time.sleep(0.1)  # Wait for new frames
-        except Exception as e:
-            print(f"Error in generate_raw_frames: {e}")
-            time.sleep(0.1)
-
 def generate_processed_frames():
     """Generator function to stream processed video frames."""
     while True:
@@ -212,11 +194,6 @@ def generate_processed_frames():
             print(f"Error in generate_processed_frames: {e}")
             time.sleep(0.1)
 
-@app.route('/raw_video_feed')
-def raw_video_feed():
-    """Endpoint to stream raw video frames."""
-    return Response(generate_raw_frames(),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/processed_video_feed')
 def processed_video_feed():
@@ -225,5 +202,5 @@ def processed_video_feed():
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 if __name__ == '__main__':
-    app.run(host='192.168.18.14', port=4440, debug=True)
-   #app.run(host='192.168.1.110', port=4440, debug=True)
+    #app.run(host='192.168.18.14', port=4440, debug=True)
+    app.run(host='192.168.1.110', port=4440, debug=True)
