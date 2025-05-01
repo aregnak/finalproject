@@ -167,7 +167,7 @@
 	}
     </style>
 </head>
-<body>
+<body style="background-color:aliceblue">
     <h1>VisionVroom Control Center</h1>
     <p>Use the buttons below or the arrow keys and spacebar to control the car.</p>
     <div class=container>
@@ -313,9 +313,13 @@
                     sendCommand('STOP');
                     break;
                 default:
-                    // Ignore other keys
+                    sendCommand('STOP'); 
                     break;
             }
+        }
+
+	function handleKeyUp(event) {
+	    sendCommand('STOP');
         }
 
         // Function to fetch and update the auto-detected direction
@@ -327,8 +331,9 @@
 
         setInterval(updateAutoDirection, 100);
 
-        // Add event listener for keydown events
+        // Add event listener for keydown events and keyup
         document.addEventListener('keydown', handleKeyDown);
+	document.addEventListener('keyup', handleKeyUp);
     </script>
 </body>
 </html>

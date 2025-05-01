@@ -51,7 +51,7 @@ void returnSpeed() {
 
 void updateSpeed(int speed) {
 
-  dutyCycle = map(speed, 0, 100, 155, 255);
+  dutyCycle = map(speed, 0, 100, 145, 255);
   //Serial.println("Calculated duty cycle: " + String(dutyCycle));
 
   // Set motor speed using PWM
@@ -307,7 +307,8 @@ void loop() {
         Serial.println("Extracted speed: " + String(speed));
 
         // Map speed to PWM duty cycle (0-100% to 0-255)
-        dutyCycle = map(speed, 0, 100, 135, 255);
+        //dutyCycle = map(speed, 0, 100, 145, 255);
+        updateSpeed(speed);
         //dcBuf = dutyCycle;
         //Serial.println("Calculated duty cycle: " + String(dutyCycle));
 
