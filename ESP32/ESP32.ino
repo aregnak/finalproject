@@ -40,10 +40,10 @@ int tempBuf = 0;
 // check speed while turning, as it is hard to turn when less than 30% speed
 void checkSpeed()
 {
-    dcBuf = dutyCycle;
-
     if (dutyCycle <= 161)
     {
+        dcBuf = dutyCycle;
+
         updateSpeed(25);
     }
 }
@@ -71,6 +71,7 @@ void handleForward()
         dcBuf = dutyCycle;
     }
     Serial.println("duty cycle: " + String(dutyCycle));
+    Serial.println("dcbuf: " + String(dcBuf));
     digitalWrite(motor1Pin1, HIGH);
     digitalWrite(motor1Pin2, LOW);
     digitalWrite(motor2Pin1, HIGH);
@@ -90,6 +91,7 @@ void handleReverse()
         dcBuf = dutyCycle;
     }
     Serial.println("duty cycle: " + String(dutyCycle));
+    Serial.println("dcbuf: " + String(dcBuf));
     // Serial.println("Reverse");
     digitalWrite(motor1Pin1, LOW);
     digitalWrite(motor1Pin2, HIGH);
