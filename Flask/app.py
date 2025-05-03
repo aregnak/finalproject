@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, render_template, Response
+from flask import Flask, jsonify, request, render_template, Response, send_file, abort
 import queue
 import time
 import cv2
@@ -237,6 +237,24 @@ def processed_video_feed():
     """Endpoint to stream processed video frames."""
     return Response(generate_processed_frames(),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/view_code/<filename>')
+def view_code(filename):
+    """Serve a specific project file as plain text."""
+    allowed_files = {
+        "server": "app.py",
+        "website": "./templates/index.html",
+        "esp32": "../ESP32/ESP32.ino"
+    }
+
+    if filename not in allowed_files:
+        return abort(404)
+
+    try:
+        return send_file(allowed_files[filename], mimetype='text/plain')
+    except Exception as e:
+        return f"Error reading file: {e}", 500
+
 
 if __name__ == '__main__':
     #app.run(host='192.168.18.14', port=4440, debug=True)
