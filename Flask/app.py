@@ -96,19 +96,13 @@ def toggle_auto_mode():
 @app.route('/set_headlights', methods=['POST'])
 def set_headlights():
     global headlights_state
-    headlights_state = request.json.get('headlights_on')
-    return jsonify({'status': 'success', 'headlights_on': headlights_state})
-
     data = request.json
-    if data and 'hdcommand' in data:
-        new_command = data['hdcommand'].upper()
-        if new_command in ["OFF", "ON"]:
-            headlights_state = new_command
+    if data and 'headlights_on' in data:
+        cmd = data['headlights_on'].upper()
+        if cmd in ["ON", "OFF"]:
+            headlights_state = cmd
             return jsonify(status="success", hdcommand=headlights_state)
-        else:
-            return jsonify(status="error", message="Invalid command"), 400
-    else:
-        return jsonify(status="error", message="No command provided"), 400
+    return jsonify(status="error", message="Invalid or missing command"), 400
 
 @app.route('/get_headlights', methods=['GET'])
 def get_headlights():
@@ -137,7 +131,7 @@ def process_image(frame_data):
     #lower_white = np.array([0, 0, 200])
     #upper_white = np.array([180, 50, 255])
     #mask = cv2.inRange(hsv, lower_white, upper_white)
-    blurred = cv2.GaussianBlur(hsv, (19, 19), 0)
+    blurred = cv2.GaussianBlur(hsv, (9, 9), 0)
     edges = cv2.Canny(blurred, 100, 150)
     
     # Detect lines

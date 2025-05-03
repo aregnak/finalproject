@@ -28,8 +28,9 @@ int PB0 = 38;
 int PB1 = 39;
 int PB2 = 40;
 
-int headlightPin = 41;
-bool lastState = false;
+int headlightPin1 = 41;
+int headlightPin2 = 42;
+String lastCommand = "";
 
 const int freq = 30000;
 int dutyCycle = 0; // PWM duty cycle for motor speed
@@ -203,12 +204,14 @@ void setup()
     pinMode(PB0, OUTPUT);
     pinMode(PB1, OUTPUT);
     pinMode(PB2, OUTPUT);
-    pinMode(headlightPin, OUTPUT);
+    pinMode(headlightPin1, OUTPUT);
+    pinMode(headlightPin2, OUTPUT);
 
     digitalWrite(PB0, LOW);
     digitalWrite(PB1, LOW);
     digitalWrite(PB2, LOW);
-    digitalWrite(headlightPin, LOW);
+    digitalWrite(headlightPin1, LOW);
+    digitalWrite(headlightPin2, LOW);
 
     // Initialize the camera
     camera_config_t config;
@@ -402,40 +405,39 @@ void loop()
         if (httpCode == HTTP_CODE_OK)
         {
             String payload = http.getString();
-
-            StaticJsonDocument<200> doc; // Adjust the size as needed
+            StaticJsonDocument<200> doc;
             DeserializationError error = deserializeJson(doc, payload);
 
             if (!error)
             {
-                String command = doc["command"];
-                //Serial.println("Extracted command: " + command);
-                command.trim();
-
-                if (command == "ON")
+                const char* command = doc["hdcommand"];
+                if (String(command) != lastCommand)
                 {
-                    digitalWrite(headlightPin, HIGH);
-                    Serial.println("HEADS ON!!!!!!!")
-                }
-                else if (command == "OFF")
-                {
-                    digitalWrite(headlightPin, LOW);
-                    Serial.println("HEADS OFF")
+                    if (strcmp(command, "ON") == 0)
+                    {
+                        digitalWrite(headlightPin1, HIGH);
+                        digitalWrite(headlightPin2, HIGH);
+                        Serial.println("HEADS ON");
+                    }
+                    else
+                    {
+                        digitalWrite(headlightPin1, LOW);
+                        digitalWrite(headlightPin2, LOW);
+                        Serial.println("HEADS OFF");
+                    }
+                    lastCommand = String(command);
                 }
             }
             else
             {
-                Serial.println("error in request");
+                Serial.println("JSON parse error.");
             }
         }
-
         else
         {
-            Serial.println("Error in speed request. Code: " + String(httpCode));
+            Serial.print("HTTP error: ");
+            Serial.println(httpCode);
         }
-
-        http.end(); // control
-
-        http.end(); // get headlights
+        http.end();
     }
 }
