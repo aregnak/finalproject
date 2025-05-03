@@ -61,7 +61,7 @@ void returnSpeed()
 
 void updateSpeed(int speed)
 {
-    dutyCycle = map(speed, 0, 100, 145, 255);
+    dutyCycle = map(speed, 0, 100, 165, 255);
     Serial.println("updated duty cycle: " + String(dutyCycle));
     Serial.println("dcbuf: " + String(dcBuf));
 

@@ -110,7 +110,89 @@ def get_headlights():
 
 
 def process_image(frame_data):
-    """Process the image to detect the line and update the command."""
+    global current_command
+
+    try:
+        nparr = np.frombuffer(frame_data, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img is None:
+            current_command = "STOP"
+            return frame_data
+    except:
+        current_command = "STOP"
+        return frame_data
+
+    height, width = img.shape[:2]
+
+    # Region of interest set to the top 40% of the screen
+    roi_start = height // 2
+    roi_end = int(height * 0.9)
+    roi = img[roi_start:roi_end, :]
+
+    # Convert to grayscale
+    gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+
+    # Invert image
+    inverted = cv2.bitwise_not(gray)
+
+    # Threshold to isolate dark (inverted = bright) lines
+    _, binary = cv2.threshold(inverted, 200, 255, cv2.THRESH_BINARY)
+
+    # Mask center region
+    mask = np.zeros_like(binary)
+    margin = int(width * 0.3)
+    cv2.rectangle(mask, (margin, 0), (width - margin, roi.shape[0]), 255, -1)
+    binary = cv2.bitwise_and(binary, mask)
+
+    # reduce noise around edges
+    kernel = np.ones((5, 5), np.uint8)
+    binary = cv2.erode(binary, kernel, iterations=1)
+    binary = cv2.dilate(binary, kernel, iterations=2)
+
+    # Find contours
+    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    if contours:
+        # Use the largest contour (presumably the line)
+        largest = max(contours, key=cv2.contourArea)
+        M = cv2.moments(largest)
+
+        if M["m00"] != 0:
+            cx = int(M["m10"] / M["m00"])  # Centroid X
+            center = width // 2
+
+            # Draw detected line and center line
+            cv2.drawContours(roi, [largest], -1, (0, 255, 0), 2)
+            cv2.circle(roi, (cx, roi.shape[0] // 2), 5, (255, 0, 0), -1)
+            cv2.line(roi, (center, 0), (center, roi.shape[0]), (0, 0, 255), 2)
+
+            # Turn threshold
+            offset = cx - center
+            if offset < -30:
+                current_command = "RIGHT"
+            elif offset > 30:
+                current_command = "LEFT"
+            else:
+                current_command = "FORWARD"
+        # Absolutely stop if no option
+        # A curse and a blessing at the same time
+        else:
+            current_command = "STOP"
+    else:
+        current_command = "STOP"
+
+    # Overlay command
+    cv2.putText(roi, current_command, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
+
+    # Encode output
+    img[roi_start:roi_end, :] = roi
+    _, jpeg = cv2.imencode('.jpg', img)
+    return jpeg.tobytes()
+
+
+
+""" def process_image(frame_data):
+    #Process the image to detect the line and update the command.
     global current_command
 
     try:
@@ -183,7 +265,7 @@ def process_image(frame_data):
    
    # Return original image with detected line drawn
     _, jpeg = cv2.imencode('.jpg', img)
-    return jpeg.tobytes()
+    return jpeg.tobytes() """
 
 def generate_processed_frames():
     """Generator function to stream processed video frames."""
