@@ -13,7 +13,7 @@ processed_frame_queue = queue.Queue(maxsize=10)
 current_command = "STOP"
 current_speed = 0  # Default speed (0-100%)
 auto_mode = False  #auto mode is disabled
-headlights_on = False # Headlights off
+headlights_state = "OFF" # Headlights off
 
 @app.route('/')
 def index():
@@ -93,18 +93,27 @@ def toggle_auto_mode():
     else:
         return jsonify(status="error", message="No auto_mode provided"), 400
 
-#@app.route('/set_headlights', methods=['POST'])
-#def toggle_headlights():
-#    global headlights_on
-#    data = request.json
-#    if 'headlights_on' in data:
-#        headlights_on = data['headlights_on']
-#        return jsonify(status="success", headlights_on=headlights_on)
-#    return jsonify(status="error"), 400
-#
-#@app.route('/toggle_headlights', methods=['GET'])
-#def get_headlights_state():
-#    return jsonify(headlights_on=headlights_on)
+@app.route('/set_headlights', methods=['POST'])
+def set_headlights():
+    global headlights_state
+    headlights_state = request.json.get('headlights_on')
+    return jsonify({'status': 'success', 'headlights_on': headlights_state})
+
+    data = request.json
+    if data and 'hdcommand' in data:
+        new_command = data['hdcommand'].upper()
+        if new_command in ["OFF", "ON"]:
+            headlights_state = new_command
+            return jsonify(status="success", hdcommand=headlights_state)
+        else:
+            return jsonify(status="error", message="Invalid command"), 400
+    else:
+        return jsonify(status="error", message="No command provided"), 400
+
+@app.route('/get_headlights', methods=['GET'])
+def get_headlights():
+    return jsonify(hdcommand=headlights_state)
+
 
 def process_image(frame_data):
     """Process the image to detect the line and update the command."""
@@ -124,11 +133,11 @@ def process_image(frame_data):
     roi = img[height//2:, :]
     
     # Filter for white and detect edges
-    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    lower_white = np.array([0, 0, 200])
-    upper_white = np.array([180, 50, 255])
-    mask = cv2.inRange(hsv, lower_white, upper_white)
-    blurred = cv2.GaussianBlur(mask, (15, 15), 0)
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    #lower_white = np.array([0, 0, 200])
+    #upper_white = np.array([180, 50, 255])
+    #mask = cv2.inRange(hsv, lower_white, upper_white)
+    blurred = cv2.GaussianBlur(hsv, (19, 19), 0)
     edges = cv2.Canny(blurred, 100, 150)
     
     # Detect lines
@@ -157,16 +166,18 @@ def process_image(frame_data):
             x1, y1, x2, y2 = line[0]
             all_x.extend([x1, x2])
 
-            cv2.line(img, (x1, height//2 + y1),
-                     (x2, height//2 + y2),
-                     (0, 255, 0), 1)
+            cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green 
+
+           # cv2.line(img, (x1, height + y1),
+           #          (x2, height + y2),
+           #          (0, 255, 0), 1)
 
         avg_x = np.mean(all_x)
         center = width // 2
         
-        if avg_x > center + 20:
+        if avg_x > center + 35:
             current_command = "LEFT"
-        elif avg_x < center - 20: 
+        elif avg_x < center - 35: 
             current_command = "RIGHT"
         else:
             current_command = "FORWARD"
@@ -203,5 +214,6 @@ def processed_video_feed():
 
 if __name__ == '__main__':
     #app.run(host='192.168.18.14', port=4440, debug=True)
+    app.run(host='192.168.18.6', port=4440, debug=True)
     #app.run(host='192.168.1.110', port=4440, debug=True)
-    app.run(host='10.210.11.70', port=4440, debug=True)
+    #app.run(host='10.210.11.70', port=4440, debug=True)

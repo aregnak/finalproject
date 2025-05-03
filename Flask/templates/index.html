@@ -186,7 +186,7 @@
     <div class="auto-direction">
 	    <p><strong>Headlights</strong></p>
 	    <label class="switch">
-		<input type="checkbox" id="lightToggle">
+		<input type="checkbox" id="lightToggle" onchange="toggleHeadlights()">
 		<span class="slider"></span>
 	    </label>
     </div>
@@ -233,16 +233,27 @@
             }
         }
 
-//	function toggleHeadlights() {
-//		const isOn = document.getElementBYId('headlights Toggle').checked;
-//		fetch('/set_headlights', {
-//			method: 'POST',
-//			headers: {'Content-Type': 'application/json'),
-//			body:
-//		JSON.stringify({headlights_on: isOn})
-//			});
-//	}
-//}
+        // initialize the switch state on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/get_headlights')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('headlightsToggle').checked = data.headlights_on;
+                    document.getElementById('headlightsState').textContent = 
+                        data.headlights_on ? 'ON' : 'OFF';
+                });
+        });
+
+        function toggleHeadlights() {
+            const isOn = document.getElementById('headlightsToggle').checked;
+            document.getElementById('headlightsState').textContent = isOn ? 'ON' : 'OFF';
+            
+            fetch('/set_headlights', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({headlights_on: isOn})
+            });
+        }
 
         // Function to update motor speed
         async function updateMotorSpeed(value) {

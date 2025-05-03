@@ -29,27 +29,34 @@ int PB1 = 39;
 int PB2 = 40;
 
 int headlightPin = 41;
+bool lastState = false;
 
 const int freq = 30000;
 int dutyCycle = 0; // PWM duty cycle for motor speed
 int dcBuf = 145;
 bool headlightsState = false;
 int oldSpeed = 0;
-int tempBuf = 0;
 
 // check speed while turning, as it is hard to turn when less than 30% speed
 void checkSpeed()
 {
+    // if the current speed is less than 15% (161)
+    // up the speed to 20% for better turning
     if (dutyCycle <= 161)
     {
         dcBuf = dutyCycle;
-
-        updateSpeed(25);
+        // 20% speed
+        updateSpeed(20);
     }
 }
 
 // return the speed to buffer before checkSpeed
-void returnSpeed() { dutyCycle = dcBuf; }
+void returnSpeed()
+{
+    // Set duty cycle to old buffer & update buffer
+    dutyCycle = dcBuf;
+    dcBuf = dutyCycle;
+}
 
 void updateSpeed(int speed)
 {
@@ -68,7 +75,6 @@ void handleForward()
     if (dcBuf != dutyCycle)
     {
         returnSpeed();
-        dcBuf = dutyCycle;
     }
     Serial.println("duty cycle: " + String(dutyCycle));
     Serial.println("dcbuf: " + String(dcBuf));
@@ -88,7 +94,6 @@ void handleReverse()
     if (dcBuf != dutyCycle)
     {
         returnSpeed();
-        dcBuf = dutyCycle;
     }
     Serial.println("duty cycle: " + String(dutyCycle));
     Serial.println("dcbuf: " + String(dcBuf));
@@ -372,14 +377,14 @@ void loop()
                     updateSpeed(speed);
                     oldSpeed = speed;
                     dcBuf = dutyCycle;
+
+                    // Set motor speed using PWM
+                    ledcWrite(enable1Pin, dutyCycle); // Update PWM for enable1Pin
+                    ledcWrite(enable2Pin, dutyCycle); // Update PWM for enable2Pin
+                    //Serial.println("Motor speed set to " + String(speed) + "%");
                 }
                 //dcBuf = dutyCycle;
                 // Serial.println("Calculated duty cycle: " + String(dutyCycle));
-
-                // Set motor speed using PWM
-                ledcWrite(enable1Pin, dutyCycle); // Update PWM for enable1Pin
-                ledcWrite(enable2Pin, dutyCycle); // Update PWM for enable2Pin
-                //Serial.println("Motor speed set to " + String(speed) + "%");
             }
         }
 
@@ -391,23 +396,45 @@ void loop()
         http.end(); // /speed
 
         // for headlights
-        http.begin(serveraddr + "/toggle_headlights");
+        http.begin(serveraddr + "/get_headlights");
         httpCode = http.GET();
 
         if (httpCode == HTTP_CODE_OK)
         {
             String payload = http.getString();
-            StaticJsonDocument<200> doc;
-            deserializeJson(doc, payload);
 
-            bool newState = doc["headlights_on"];
+            StaticJsonDocument<200> doc; // Adjust the size as needed
+            DeserializationError error = deserializeJson(doc, payload);
 
-            if (newState != headlightsState)
+            if (!error)
             {
-                headlightsState = newState;
-                digitalWrite(headlightPin, headlightsState ? HIGH : LOW);
+                String command = doc["command"];
+                //Serial.println("Extracted command: " + command);
+                command.trim();
+
+                if (command == "ON")
+                {
+                    digitalWrite(headlightPin, HIGH);
+                    Serial.println("HEADS ON!!!!!!!")
+                }
+                else if (command == "OFF")
+                {
+                    digitalWrite(headlightPin, LOW);
+                    Serial.println("HEADS OFF")
+                }
+            }
+            else
+            {
+                Serial.println("error in request");
             }
         }
+
+        else
+        {
+            Serial.println("Error in speed request. Code: " + String(httpCode));
+        }
+
+        http.end(); // control
 
         http.end(); // get headlights
     }
