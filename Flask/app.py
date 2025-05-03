@@ -13,6 +13,7 @@ processed_frame_queue = queue.Queue(maxsize=10)
 current_command = "STOP"
 current_speed = 0  # Default speed (0-100%)
 auto_mode = False  #auto mode is disabled
+last_command = "STOP"
 headlights_state = "OFF" # Headlights off
 
 @app.route('/')
@@ -132,6 +133,8 @@ def process_image(frame_data):
     # Convert to grayscale
     gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
 
+    # The following works best for dark linles on a light background.
+    # For white lines, remove `inverted` and pass `gray` argument to binary threshold below.
     # Invert image
     inverted = cv2.bitwise_not(gray)
 
@@ -170,10 +173,13 @@ def process_image(frame_data):
             offset = cx - center
             if offset < -30:
                 current_command = "RIGHT"
+                last_command = current_command
             elif offset > 30:
                 current_command = "LEFT"
+                last_command = current_command
             else:
                 current_command = "FORWARD"
+                last_command = current_command
         # Absolutely stop if no option
         # A curse and a blessing at the same time
         else:
@@ -189,83 +195,6 @@ def process_image(frame_data):
     _, jpeg = cv2.imencode('.jpg', img)
     return jpeg.tobytes()
 
-
-
-""" def process_image(frame_data):
-    #Process the image to detect the line and update the command.
-    global current_command
-
-    try:
-        nparr = np.frombuffer(frame_data, np.uint8)
-        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        if img is None:
-            current_command = "STOP"
-            return frame_data
-    except:
-        current_command = "STOP"
-        return frame_data
-
-    height, width = img.shape[:2]
-    roi = img[height//2:, :]
-    
-    # Filter for white and detect edges
-    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    #lower_white = np.array([0, 0, 200])
-    #upper_white = np.array([180, 50, 255])
-    #mask = cv2.inRange(hsv, lower_white, upper_white)
-    blurred = cv2.GaussianBlur(hsv, (9, 9), 0)
-    edges = cv2.Canny(blurred, 100, 150)
-    
-    # Detect lines
-    lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=35, minLineLength=5, maxLineGap=10)
-    
-    if lines is not None:
-
-# old line tracking logic
-#        x1, y1, x2, y2 = lines[0][0]
-#
-#        # Draw line on image (optional)
-#        cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-#        
-#        # Simple steering logic
-#        center = img.shape[1] // 2
-#        line_center = (x1 + x2) // 2
-#        
-#        if line_center > center + 50:
-#            current_command = "RIGHT"
-#        elif line_center < center - 50:
-#            current_command = "LEFT"
-#        else:
-#            current_command = "FORWARD"
-        all_x = []
-        for line in lines:
-            x1, y1, x2, y2 = line[0]
-            all_x.extend([x1, x2])
-
-            cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green 
-
-           # cv2.line(img, (x1, height + y1),
-           #          (x2, height + y2),
-           #          (0, 255, 0), 1)
-
-        avg_x = np.mean(all_x)
-        center = width // 2
-        
-        if avg_x > center + 35:
-            current_command = "LEFT"
-        elif avg_x < center - 35: 
-            current_command = "RIGHT"
-        else:
-            current_command = "FORWARD"
-
-
-        cv2.line(img, (center, height), (center, height//2), (0,0,255), 1)  # Center line
-        cv2.putText(img, current_command, (width-100, 30), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,0,255), 2)
-   
-   # Return original image with detected line drawn
-    _, jpeg = cv2.imencode('.jpg', img)
-    return jpeg.tobytes() """
 
 def generate_processed_frames():
     """Generator function to stream processed video frames."""
