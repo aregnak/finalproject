@@ -12,8 +12,10 @@ processed_frame_queue = queue.Queue(maxsize=10)
 # Default command and speed
 current_command = "STOP"
 current_speed = 0  # Default speed (0-100%)
-auto_mode = False  #auto mode is disabled
-last_command = "STOP"
+auto_mode = False  # Auto mode is disabled
+last_command = "STOP"  # In case it stops detecting lines
+lost_line_time = None  # Wait before starting recovery sequence
+recovery_time = None   # Time under recovery mode
 headlights_state = "OFF" # Headlights off
 
 @app.route('/')
@@ -156,6 +158,8 @@ def process_image(frame_data):
     contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     if contours:
+        recovery_time = None
+        lost_line_time = None
         # Use the largest contour (presumably the line)
         largest = max(contours, key=cv2.contourArea)
         M = cv2.moments(largest)
@@ -173,19 +177,33 @@ def process_image(frame_data):
             offset = cx - center
             if offset < -30:
                 current_command = "RIGHT"
-                last_command = current_command
             elif offset > 30:
                 current_command = "LEFT"
-                last_command = current_command
             else:
                 current_command = "FORWARD"
-                last_command = current_command
+            
+            
+            last_command = current_command
         # Absolutely stop if no option
         # A curse and a blessing at the same time
         else:
             current_command = "STOP"
     else:
-        current_command = "STOP"
+        if lost_line_time is None:
+            lost_line_time = time.time()
+            
+        # Wait 2 seconds before recovery
+        if time.time() - lost_line_time > 2.0: 
+            current_command = last_command
+
+            if recovery_time is None:
+                recovery_time = time.time()
+                
+            if time.time() - recovery_time > 2.0:
+                current_command = "STOP"
+
+        else:
+            current_command = "STOP"
 
     # Overlay command
     cv2.putText(roi, current_command, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
