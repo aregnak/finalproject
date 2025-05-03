@@ -11,6 +11,10 @@
             margin-top: 50px;
 	    -webkit-user-select: none;
         }
+        nav a { margin: 0 10px; text-decoration: none; }
+        pre { background: #1e1e1e; color: #dcdcdc; padding: 20px; overflow-x: auto; border-radius: 8px; }
+        .tab { display: none; }
+        .tab.active { display: block; }
 
 	.container {
 	  position: relative;
@@ -160,46 +164,55 @@
     </style>
 </head>
 <body style="background-color:aliceblue">
-    <h1>VisionVroom Control Center</h1>
-    <p>Use the buttons below or the arrow keys and spacebar to control the car.</p>
-    <div class=container>
-    <button class="button-27 up" onmousedown="sendCommand('FORWARD');" onmouseup="sendCommand('STOP');" ontouchstart="sendCommand('FORWARD');" ontouchend="sendCommand('STOP');">Forward</button>
+        
+    <nav>
+        <a href="#" onclick="showTab('control')">Control</a>
+        <a href="#" onclick="showTab('code')">View Code</a>
+    </nav>
+        
+    <div id="control" class="tab active">
+        <h1>VisionVroom Control Center</h1>
+        <p>Use the buttons below or the arrow keys and spacebar to control the car.</p>
 
-    <button class="button-27 down" onmousedown="sendCommand('REVERSE');" onmouseup="sendCommand('STOP');" ontouchstart="sendCommand('REVERSE');" ontouchend="sendCommand('STOP');">Reverse</button>
+        <div class=container>
+            <button class="button-27 up" onmousedown="sendCommand('FORWARD');" onmouseup="sendCommand('STOP');" ontouchstart="sendCommand('FORWARD');" ontouchend="sendCommand('STOP');">Forward</button>
 
-    <button class="button-27 right" onmousedown="sendCommand('RIGHT');" onmouseup="sendCommand('STOP');" ontouchstart="sendCommand('RIGHT');" ontouchend="sendCommand('STOP');">Right</button>
+            <button class="button-27 down" onmousedown="sendCommand('REVERSE');" onmouseup="sendCommand('STOP');" ontouchstart="sendCommand('REVERSE');" ontouchend="sendCommand('STOP');">Reverse</button>
 
-    <button class="button-27 left" onmousedown="sendCommand('LEFT');" onmouseup="sendCommand('STOP');" ontouchstart="sendCommand('LEFT');" ontouchend="sendCommand('STOP');">Left</button>
+            <button class="button-27 right" onmousedown="sendCommand('RIGHT');" onmouseup="sendCommand('STOP');" ontouchstart="sendCommand('RIGHT');" ontouchend="sendCommand('STOP');">Right</button>
 
-    <button class="button-27 stop" onclick="sendCommand('STOP')">Stop</button>
-    </div>
+            <button class="button-27 left" onmousedown="sendCommand('LEFT');" onmouseup="sendCommand('STOP');" ontouchstart="sendCommand('LEFT');" ontouchend="sendCommand('STOP');">Left</button>
 
-    <!--auto direction class because the formatting is the same -->
-    <div class="auto-direction">
-	    <p><strong>Headlights</strong></p>
-	    <label class="switch">
-		<input type="checkbox" id="lightToggle" onchange="toggleHeadlights()">
-		<span class="slider"></span>
-	    </label>
-    </div>
+            <button class="button-27 stop" onclick="sendCommand('STOP')">Stop</button>
+        </div>
 
-
-    <p>Motor Speed: <span id="motorSpeed">0</span>%</p>
-    <input type="range" min="0" max="100" step="5" id="motorSlider" oninput="updateMotorSpeed(this.value)" value="0"/>
-
-    <div class="auto-direction">
-        <p><strong>Auto Mode:</strong></p>
-        <label class="switch">
-            <input type="checkbox" id="autoModeToggle" onchange="toggleAutoMode()">
+        <!--auto direction class because the formatting is the same -->
+        <div class="auto-direction">
+            <p><strong>Headlights</strong></p>
+            <label class="switch">
+            <input type="checkbox" id="lightToggle" onchange="toggleHeadlights()">
             <span class="slider"></span>
-        </label>
-    </div>
+            </label>
+        </div>
 
-    <p id="status-message"></p>
 
-    <div class="video-container">
-	    <!-- <img class="video-stream" src="/raw_video_feed" alt="Raw Video Stream"> -->
-        <img class="video-stream" src="/processed_video_feed" alt="Processed Video Stream">
+        <p>Motor Speed: <span id="motorSpeed">0</span>%</p>
+        <input type="range" min="0" max="100" step="5" id="motorSlider" oninput="updateMotorSpeed(this.value)" value="0"/>
+
+        <div class="auto-direction">
+            <p><strong>Auto Mode:</strong></p>
+            <label class="switch">
+                <input type="checkbox" id="autoModeToggle" onchange="toggleAutoMode()">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <p id="status-message"></p>
+
+        <div class="video-container">
+            <!-- <img class="video-stream" src="/raw_video_feed" alt="Raw Video Stream"> -->
+            <img class="video-stream" src="/processed_video_feed" alt="Processed Video Stream">
+        </div>
     </div>
 
     <script>
@@ -311,6 +324,11 @@
             }
         }
 
+    function showTab(tabId) {
+        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+    }
+    
 	function handleKeyUp(event) {
 	    sendCommand('STOP');
         }
@@ -322,10 +340,10 @@
             document.getElementById('autoDirection').textContent = data.command;
         }
 
-        setInterval(updateAutoDirection, 100);
+    setInterval(updateAutoDirection, 100);
 
-        // Add event listener for keydown events and keyup
-        document.addEventListener('keydown', handleKeyDown);
+    // Add event listener for keydown events and keyup
+    document.addEventListener('keydown', handleKeyDown);
 	document.addEventListener('keyup', handleKeyUp);
     </script>
 </body>
