@@ -114,6 +114,9 @@ def get_headlights():
 
 def process_image(frame_data):
     global current_command
+    global lost_line_time
+    global recovery_time
+    global last_command
 
     try:
         nparr = np.frombuffer(frame_data, np.uint8)
@@ -141,7 +144,8 @@ def process_image(frame_data):
     inverted = cv2.bitwise_not(gray)
 
     # Threshold to isolate dark (inverted = bright) lines
-    _, binary = cv2.threshold(inverted, 200, 255, cv2.THRESH_BINARY)
+    # Change threshold depending on climate
+    _, binary = cv2.threshold(inverted, 180, 255, cv2.THRESH_BINARY)
 
     # Mask center region
     mask = np.zeros_like(binary)
@@ -175,13 +179,12 @@ def process_image(frame_data):
 
             # Turn threshold
             offset = cx - center
-            if offset < -30:
+            if offset < -35:
                 current_command = "RIGHT"
-            elif offset > 30:
+            elif offset > 35:
                 current_command = "LEFT"
             else:
                 current_command = "FORWARD"
-            
             
             last_command = current_command
         # Absolutely stop if no option
@@ -191,17 +194,17 @@ def process_image(frame_data):
     else:
         if lost_line_time is None:
             lost_line_time = time.time()
-            
-        # Wait 2 seconds before recovery
-        if time.time() - lost_line_time > 2.0: 
-            current_command = last_command
+
+        # Wait 2 seconds before triggering recovery
+        if time.time() - lost_line_time > 1.0:
+            current_command = "REVERSE"
 
             if recovery_time is None:
                 recovery_time = time.time()
-                
+
+            # Stop after 2 seconds of recovery
             if time.time() - recovery_time > 2.0:
                 current_command = "STOP"
-
         else:
             current_command = "STOP"
 
