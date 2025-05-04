@@ -6,17 +6,18 @@
 ; remove the line below if assembling on microchip studio
 .include "m8515def.inc"
 
-.equ BATMAX = 0xff ; ADC max voltage cutoff for percentage
-.equ BATMIN = 0xd2 ; ADC min cutoff
+.equ BATMAX = 255; ADC max voltage cutoff for percentage
+.equ BATMIN = 230; ADC min cutoff
 
 .dseg
 .org $60
-adclsb: .byte 1 ; you can tell        at $60
-adcmsb: .byte 1 ; you can tell        at $61
-adchex: .byte 1 ; ADC's raw hex value at $62
-bat0:   .byte 1 ; Battery msb         at $63
-bat1:   .byte 1 ; Battery middle      at $64
-bat2:   .byte 1 ; Battery lsb         at $65
+adclsb:   .byte 1 ; you can tell        at $60
+adcmsb:   .byte 1 ; you can tell        at $61
+adchex:   .byte 1 ; ADC's raw hex value at $62
+bat0:     .byte 1 ; Battery msb         at $63
+bat1:     .byte 1 ; Battery middle      at $64
+bat2:     .byte 1 ; Battery lsb         at $65
+batupdel: .byte 3 ; Battery update del  from $66 to $68
 
 .cseg
 reset: rjmp init     ;used as an entry point for the reset
@@ -35,6 +36,14 @@ init:
   ; initialize portb as input
   ldi r16, $00
   out DDRB, r16
+  
+  ; Initialize battery delay to $60ffff (~28 seconds)
+  ; Little endian
+  ldi r16, $60
+  sts batupdel, r16
+  ldi r16, $ff
+  sts batupdel+1, r16
+  sts batupdel+2, r16
 
 bootmessage:
   ldi ZH, HIGH(bootmsg<<1)
@@ -86,7 +95,28 @@ loop:
 ;  sts test2, r16
 
 ; call percent calculation subroutine
+
+  ; Simplifies my job to load all memory values here and store
+  ; them back in loop:continue
+  lds r23, batupdel
+  lds XH, batupdel+1
+  lds XL, batupdel+2
+
+	sbiw XH:XL, 1
+	brne loop_continue 
+  
+	subi r23, 1
+	brne loop_continue
+
   rcall percent
+  ldi r23, $60
+  ; XH and XL will reset to FF:FF because of overflow
+  ; No need to set them back here
+
+loop_continue:
+  sts batupdel, r23 
+  sts batupdel+1, XH
+  sts batupdel+2, XL
 
 ; convert hex value (on r16) to decimal
   rcall hex2dec
