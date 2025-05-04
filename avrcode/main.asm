@@ -54,8 +54,6 @@ wificmp:
   rcall wait
   rcall lcd_clear
   ;rjmp wificmp  ; loop connecting message until connected
-  ;
-  ; UNCOMMENT THAT^^^^^ !!!!!!!!!!!!!!!!!!!!!
 
 wifigood:
   rcall ln1
@@ -114,7 +112,7 @@ loop:
   cpi r16, $06
   breq msgstop
 
-  ; default to NULL message
+  ; Default to NULL message if no command
 msgnull:
   ldi ZH, HIGH(nullmsg<<1)
   ldi ZL, LOW(nullmsg<<1)
@@ -159,7 +157,8 @@ msgauto:
 
 failsafeloop:
   rjmp failsafeloop
-  ; very failsafe, in case something catastrophic happens
+  ; Very failsafe, in case something catastrophic happens
+  ; and it gets to this point in code
 
 ;-----------------------------
 ; subroutines
