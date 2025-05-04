@@ -13,11 +13,12 @@
 .org $60
 adclsb:   .byte 1 ; you can tell        at $60
 adcmsb:   .byte 1 ; you can tell        at $61
-adchex:   .byte 1 ; ADC's raw hex value at $62
-bat0:     .byte 1 ; Battery msb         at $63
-bat1:     .byte 1 ; Battery middle      at $64
-bat2:     .byte 1 ; Battery lsb         at $65
-batupdel: .byte 1 ; Battery update del  at $66
+bat0:     .byte 1 ; Battery msb         at $62
+bat1:     .byte 1 ; Battery middle      at $63
+bat2:     .byte 1 ; Battery lsb         at $64
+batupdel: .byte 1 ; Battery update del  at $65
+batval:   .byte 1 ; Battery value now   at $66
+batbuff:  .byte 1 ; Battery value buf   at $67
 
 .cseg
 reset: rjmp init     ;used as an entry point for the reset
@@ -71,8 +72,20 @@ wifigood:
   rcall lcd_puts
   rcall wait
 
+init_bat_buff:
+  sts $6000, r1
+
+init_bat_buff_loop:
+  ; check for adc input
+  in r20, PINB
+  andi r20, $8 ; check for 00010000 on portb
+  cpi r20, $1
+  breq init_bat_buff_loop     ; loop while nothing received
+  lds r16, $6000
+  sts batbuff, r16
+
 main:
-  ; start adc
+  ; run adc
   sts $6000, r1
 
 loop:
@@ -83,6 +96,7 @@ loop:
   breq loop     ; loop while nothing received
 
   lds r16, $6000 ; store adc value into r20
+  sts batval, r16
 
 ; uncomment if you want the raw adc hex input converted to ascii
 ;  rcall hex2asc
@@ -90,12 +104,32 @@ loop:
 ;  mov r16, r17
 ;  sts test2, r16
 
+  lds r16, batval
+  lds r17, batbuff
+  cp r16, r17
+  brge no_swap ; If r16 >= r17, no need to swap
+
+  ; Swap for absolute value
+  mov  r18, r16 ; r18 acts as r16's buffer
+  mov  r16, r17
+  mov  r17, r18
+
+no_swap:
+  sub r16, r17 ; r16 = |r16 - r17|
+  cpi r16, 5 ; Compare |difference| with 5
+  brsh do_percent  ; skip averaging if the difference is less than 10
+  
+do_avg:
+  rcall checkavg
+
+do_percent:
   ; call percent calculation subroutine
   ; after a small delay
   lds r21, batupdel
-
   subi r21, 1
-  brne loop_continue
+  ;brne loop_continue
+  
+  lds r16, batval   ; store bat value in hex for %
 
   rcall percent
 
@@ -249,6 +283,25 @@ store:
 zero:
   ldi r16, 0 ; zero out the output
   ret
+  
+; Check battery value and average with the
+; previous one if difference is too high
+; for more even and accurate battery display
+checkavg:
+  lds r16, batval
+  lds r17, batbuff
+  clr r18
+
+  add r16, r17
+  clr r17
+  adc r17, r18
+  
+  lsr r17
+  ror r16
+  
+  sts batval, r16 ; Store averaged bat val
+  ret
+
 
 
 ; R0 / R17 = R0,  Remainder R4
