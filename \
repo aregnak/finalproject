@@ -17,7 +17,7 @@ adchex:   .byte 1 ; ADC's raw hex value at $62
 bat0:     .byte 1 ; Battery msb         at $63
 bat1:     .byte 1 ; Battery middle      at $64
 bat2:     .byte 1 ; Battery lsb         at $65
-batupdel: .byte 1 ; Battery update del  at $66
+batupdel: .byte 3 ; Battery update del  from $66 to $68
 
 .cseg
 reset: rjmp init     ;used as an entry point for the reset
@@ -37,9 +37,13 @@ init:
   ldi r16, $00
   out DDRB, r16
   
-  ; Small delay before displaying battery percentage
-  ldi r16, $5
+  ; Initialize battery delay to $60ffff (~28 seconds)
+  ; Little endian
+  ;ldi r16, $60
   sts batupdel, r16
+  ldi r16, $ff
+  sts batupdel+1, r16
+  sts batupdel+2, r16
 
 bootmessage:
   ldi ZH, HIGH(bootmsg<<1)
@@ -90,12 +94,23 @@ loop:
 ;  mov r16, r17
 ;  sts test2, r16
 
-  ; call percent calculation subroutine
-  ; after a small delay
-  lds r21, batupdel
+; call percent calculation subroutine
 
-  subi r21, 1
+  ; Simplifies my job to load all memory values here and store
+  ; them back in loop:continue
+  ;lds r23, batupdel
+  ;lds r22, batupdel+1
+  lds r21, batupdel+2
+
+  ;mov r25, r21
+  ;subi r25, 1
   brne loop_continue
+
+	;subi r21, 1
+	;brne loop_continue 
+  
+	;subi r23, 1
+	;brne loop_continue
 
   rcall percent
 
@@ -106,10 +121,14 @@ loop:
   sts bat2, r2
   
   ; re-initialize delay
-  ldi r21, $15
+  ;ldi r23, $1
+  ldi r22, $ff
+  ldi r21, $5
 
 loop_continue:
-  sts batupdel, r21 
+  ;sts batupdel, r23 
+  sts batupdel+1, r22 
+  sts batupdel+2, r21 
 
   ; get directional message
   rcall getb
