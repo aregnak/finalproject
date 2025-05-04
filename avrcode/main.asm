@@ -116,7 +116,7 @@ loop:
 
 no_swap:
   sub r16, r17 ; r16 = |r16 - r17|
-  cpi r16, 5 ; Compare |difference| with 5
+  cpi r16, $6 ; Compare |difference| with 6
   brsh do_percent  ; skip averaging if the difference is less than 10
   
 do_avg:
@@ -127,9 +127,10 @@ do_percent:
   ; after a small delay
   lds r21, batupdel
   subi r21, 1
-  ;brne loop_continue
+  brne loop_continue
   
   lds r16, batval   ; store bat value in hex for %
+  sts batbuff, r16 
 
   rcall percent
 
@@ -290,14 +291,13 @@ zero:
 checkavg:
   lds r16, batval
   lds r17, batbuff
-  clr r18
+  subi r16, $80 ; subtract 128 to not use 16 bit registers
+  subi r17, $80 
 
   add r16, r17
-  clr r17
-  adc r17, r18
+  lsr r16
   
-  lsr r17
-  ror r16
+  subi r16, -$80 ; add back the 128
   
   sts batval, r16 ; Store averaged bat val
   ret
