@@ -8,12 +8,12 @@
 
 .dseg
 .org $60
-adclsb: .byte 1 ; at $60
-adcmsb: .byte 1 ; at $61
-adchex: .byte 1 ; at $62
-bat0:   .byte 1 ; at $63
-bat1:   .byte 1 ; you get it they're all after the other
-bat2:   .byte 1 ; no...
+adclsb: .byte 1 ; you can tell        at $60
+adcmsb: .byte 1 ; you can tell        at $61
+adchex: .byte 1 ; ADC's raw hex value at $62
+bat0:   .byte 1 ; Battery msb         at $63
+bat1:   .byte 1 ; Battery middle      at $64
+bat2:   .byte 1 ; Battery lsb         at $65
 
 .cseg
 reset: rjmp init     ;used as an entry point for the reset

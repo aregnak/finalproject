@@ -244,7 +244,8 @@ def view_code(filename):
     allowed_files = {
         "server": "app.py",
         "website": "./templates/index.html",
-        "esp32": "../ESP32/ESP32.ino"
+        "esp32": "../ESP32/ESP32.ino",
+        "avr": "../avrcode/main.asm"
     }
 
     if filename not in allowed_files:
