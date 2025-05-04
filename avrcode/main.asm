@@ -6,6 +6,9 @@
 ; remove the line below if assembling on microchip studio
 .include "m8515def.inc"
 
+.equ BATMAX = 0xff ; ADC max voltage cutoff for percentage
+.equ BATMIN = 0xd2 ; ADC min cutoff
+
 .dseg
 .org $60
 adclsb: .byte 1 ; you can tell        at $60
@@ -208,24 +211,25 @@ print:
   ret
 
 
-; calculate battery percentage of a 9v batter in the range of 9.7v-7.2v (0xff-0xc0)
+; calculate battery percentage of a 9v battery 
 ; input: r16 should have adc level in hex
 ; output: r16 with the percentage in hex
 
-; percentage = ((adc value - 192) * 100) / 63
-; the *100 needs to be done before the division as it will give a fraction every time
+; percentage = ((adc value - MIN) * 100) / (MAX - MIN)
+; The *100 needs to be done before the division as it will give a fraction every time
 percent:
-  subi r16, 192 ; read level - 192
+  subi r16, BATMIN ; read level - MIN 
   brcs zero ; if less than 0, display 0%
   breq zero ; if equal to 0, display 0%
 
-  ldi r17, 100
+  ldi r17, 100 ; multiply by 100
   mul r16, r17
 
-  clr r3
-  ldi r17, 63
+  clr r3 ; clear divisor MSB
+  ldi r17, BATMAX ; MAX-MIN subtraction
+  subi r17, BATMIN
   mov r2, r17
-  rcall div16
+  rcall div16 ; call division
 
 store:
   mov r16, r0  ; save percentage into r16
