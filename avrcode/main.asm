@@ -54,7 +54,7 @@ bootmessage:
 
 wificmp:
   rcall getb          ; get portb input
-  cpi r16, $01
+  cpi r16, $04
   breq wifigood
   rcall ln1
   ldi ZH, HIGH(wifimsg<<1)
@@ -62,7 +62,7 @@ wificmp:
   rcall lcd_puts
   rcall wait
   rcall lcd_clear
-  ;rjmp wificmp  ; loop connecting message until connected
+  rjmp wificmp  ; loop connecting message until connected
 
 wifigood:
   rcall ln1
@@ -151,13 +151,15 @@ loop_continue:
   cpi r16, $02
   breq msgfore
 
-  rcall getb
   cpi r16, $03
   breq msgback 
+  
+  cpi r16, $04
+  breq msgleft
+
   cpi r16, $05
   breq msgright
 
-  rcall getb
   cpi r16, $06
   breq msgstop
 
