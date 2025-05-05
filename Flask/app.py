@@ -131,7 +131,8 @@ def process_image(frame_data):
     height, width = img.shape[:2]
 
     # Region of interest set to the top 40% of the screen
-    roi_start = height // 2
+    #roi_start = height // 2 
+    roi_start = int(height*0.65)
     roi_end = int(height * 0.9)
     roi = img[roi_start:roi_end, :]
 
@@ -145,7 +146,8 @@ def process_image(frame_data):
 
     # Threshold to isolate dark (inverted = bright) lines
     # Change threshold depending on climate
-    _, binary = cv2.threshold(inverted, 180, 255, cv2.THRESH_BINARY)
+    _, binary = cv2.threshold(inverted, 140, 255, cv2.THRESH_BINARY)
+    #_, binary = cv2.threshold(gray, 250, 255, cv2.THRESH_BINARY)
 
     # Mask center region
     mask = np.zeros_like(binary)
@@ -209,7 +211,7 @@ def process_image(frame_data):
             current_command = "STOP"
 
     # Overlay command
-    cv2.putText(roi, current_command, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
+    #cv2.putText(roi, current_command, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
 
     # Encode output
     img[roi_start:roi_end, :] = roi
@@ -259,6 +261,6 @@ def view_code(filename):
 
 if __name__ == '__main__':
     #app.run(host='192.168.18.14', port=4440, debug=True)
-    app.run(host='192.168.18.6', port=4440, debug=True)
-    #app.run(host='192.168.1.110', port=4440, debug=True)
+    #app.run(host='192.168.18.6', port=4440, debug=True)
+    app.run(host='192.168.1.131', port=4440, debug=True)
     #app.run(host='10.210.11.70', port=4440, debug=True)
