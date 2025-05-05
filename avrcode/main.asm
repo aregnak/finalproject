@@ -31,15 +31,25 @@ init:
   ldi r16, HIGH(RAMEND)
   out SPH, r16
 
+  ; Init lcd and bus
   rcall init_bus
   rcall init_lcd
 
-  ; initialize portb as input
+  ; Initialize portb as input
   ldi r16, $00
   out DDRB, r16
   
-  ; Small delay before displaying battery percentage
-  ldi r16, $5
+  ; Initialize memory addresses to 0
+  sts adclsb, r16 
+  sts adcmsb, r16 
+  sts bat0, r16 
+  sts bat1, r16 
+  sts bat2, r16 
+  sts batval, r16 
+  sts batbuff, r16 
+       
+  ; Initialize battery update delay loop
+  ldi r16, $1
   sts batupdel, r16
 
 bootmessage:
@@ -47,7 +57,7 @@ bootmessage:
 	ldi ZL, LOW(bootmsg<<1)
   rcall lcd_puts
   ldi r23, $4               ; a delay to properly see welcome message
-  ldi XH, $ff
+  ldi XH, $8f
   ldi XL, $ff
   rcall delay_bigger
   rcall lcd_clear
