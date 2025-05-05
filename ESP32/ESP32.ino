@@ -43,7 +43,7 @@ void checkSpeed()
 {
     // if the current speed is less than 15% (161)
     // up the speed to 20% for better turning
-    if (dutyCycle <= 161)
+    if (dutyCycle <= 160)
     {
         dcBuf = dutyCycle;
         // 20% speed
@@ -61,7 +61,7 @@ void returnSpeed()
 
 void updateSpeed(int speed)
 {
-    dutyCycle = map(speed, 0, 100, 165, 255);
+    dutyCycle = map(speed, 0, 100, 150, 255);
     Serial.println("updated duty cycle: " + String(dutyCycle));
     Serial.println("dcbuf: " + String(dcBuf));
 
@@ -113,7 +113,7 @@ void handleReverse()
 void handleLeft()
 {
     // Serial.println("Left");
-    checkSpeed();
+    // checkSpeed();
     Serial.println("duty cycle: " + String(dutyCycle));
     digitalWrite(motor1Pin1, HIGH);
     digitalWrite(motor1Pin2, LOW);
@@ -130,7 +130,7 @@ void handleRight()
 {
     // Serial.println("Right");
     Serial.println("duty cycle: " + String(dutyCycle));
-    checkSpeed();
+    // checkSpeed();
     digitalWrite(motor1Pin1, LOW);
     digitalWrite(motor1Pin2, HIGH);
     digitalWrite(motor2Pin1, HIGH);
@@ -284,6 +284,7 @@ void setup()
     Serial.println("WiFi connected.");
     Serial.println("IP address: ");
     Serial.println(WiFi.localIP());
+    delay(300);
     digitalWrite(PB0, HIGH);
     digitalWrite(PB1, LOW);
     digitalWrite(PB2, LOW);
