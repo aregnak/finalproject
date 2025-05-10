@@ -210,12 +210,6 @@ msgstop:
   rcall print
   rjmp main
 
-msgauto:
-  ldi ZH, HIGH(automsg<<1)
-  ldi ZL, LOW(automsg<<1)
-  rcall print
-  rjmp main
-
 failsafeloop:
   rjmp failsafeloop
   ; Very failsafe, in case something catastrophic happens
@@ -388,7 +382,6 @@ rightmsg:    .db "ESP32: Right", 0
 leftmsg:     .db "ESP32: Left", 0
 stopmsg:     .db "ESP32: Stop", 0
 nullmsg:     .db "ESP32: NULL", 0
-automsg:     .db "ESP32: auto mode ", 0
 batmsg:      .db "BAT0: ", 0
 
 ; includes
