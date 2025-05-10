@@ -234,7 +234,7 @@
     <div id="code" class="tab" style="text-align: left;">
         <div style="text-align: center;">
 
-            <h2>📜 View Project Code</h2>
+            <h2>View Project Code</h2>
 
             <!-- File selector dropdown -->
             <label for="file-select">Choose a file:</label>
@@ -248,7 +248,7 @@
         </div>
     
         <!-- Code viewer -->
-        <pre id="code-block"><code id="code-content" class="language-python">📂 Select a file to display its contents here.</code></pre>
+        <pre id="code-block"><code id="code-content" class="language-python">Select a file to display its contents here.</code></pre>
     </div>
     <script>
         // Function to send commands to the server
@@ -367,7 +367,7 @@
     function loadCode(file) {
     const codeEl = document.getElementById('code-content');
     if (!file) {
-        codeEl.textContent = '📂 Select a file to display its contents here.';
+        codeEl.textContent = 'Select a file to display its contents here.';
         hljs.highlightElement(codeEl);
         return;
     }
@@ -382,7 +382,7 @@
             hljs.highlightElement(codeEl);
         })
         .catch(err => {
-            codeEl.textContent = `❌ Error loading file: ${err.message}`;
+            codeEl.textContent = `Error loading file: ${err.message}`;
             hljs.highlightElement(codeEl);
         });
 }
@@ -404,5 +404,5 @@
     document.addEventListener('keydown', handleKeyDown);
 	document.addEventListener('keyup', handleKeyUp);
     </script>
-</body>
+    </body>
 </html>

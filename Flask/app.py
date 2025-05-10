@@ -261,6 +261,6 @@ def view_code(filename):
 
 if __name__ == '__main__':
     #app.run(host='192.168.18.14', port=4440, debug=True)
-    #app.run(host='192.168.18.6', port=4440, debug=True)
-    app.run(host='192.168.1.131', port=4440, debug=True)
+    app.run(host='192.168.18.6', port=4440, debug=True)
+    #app.run(host='192.168.1.131', port=4440, debug=True)
     #app.run(host='10.210.11.70', port=4440, debug=True)
